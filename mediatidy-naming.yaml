@@ -1,0 +1,90 @@
+# ==============================================================================
+# MediaTidy 命名规则（naming）
+# ------------------------------------------------------------------------------
+# 【一句话看懂本文件】
+#   下面两条规则，除了「文件名末尾要不要带字幕信息」以外，生成结果完全一样。
+#     · 第 1 条「全信息命名」        → 不带字幕
+#     · 第 2 条「全信息命名（含字幕）」→ 带字幕（需要开 ffprobe 才会有值）
+#   当前启用：第 2 条（含字幕）。第 1 条已整块注释保留，需要时取消注释即可。
+# ------------------------------------------------------------------------------
+# 【目标格式】依据参考样本：
+#   案发现场.Scene of Crime.2004.S01E01.2160p.AAC.AVC.mp4
+#   → 中文标题.英文标题.年份.季集.属性.属性.扩展名
+#
+# 约定：
+#   1. 开头中文标题，紧跟原始/英文标题（{{title}}.{{originalTitle}}）
+#   2. 年份直接跟随，不加括号
+#   3. **所有属性之间一律用「.」连接**，不用空格、不用「-」
+#   4. 文件夹用 Emby/Jellyfin 方括号风格 {{title}} ({{year}}) [tmdbid-{{tmdbid}}]；文件名不带 tmdbid
+#   5. 信息密度取「全」，缺失的属性替换为空 → 连续点号被系统自动合并，不留残渣
+#
+# 语法约束（严格遵守）：只用文档列出的模板变量做纯替换，
+#   不使用正则 / 通配符 / 格式化函数 / 条件分支（那属于分类规则）
+# 合并逻辑：命名规则按 name 合并（同名覆盖、异名并存）
+# ==============================================================================
+
+naming:
+  # ============================================================================
+  # 【第 1 条】全信息命名 —— 不带字幕
+  # ★ 已停用：下面整块用 # 注释掉了，保留备用。要启用就把每行开头的 "  # " 去掉
+  # ----------------------------------------------------------------------------
+  # 结尾样子（以流浪地球 4K 蓝光原盘为例）：
+  #   ...BluRay Remux.Director's Cut.FRDS.mkv
+  # 特点：只看文件名里的信息就够，不依赖 ffprobe。
+  # 属性顺序对齐参考样本：分辨率 → 音频编码 → 视频编码，其后接 HDR / 色深 /
+  # 声道 / 音频特性 / 片源 / 流媒体来源 / 版本 / 压制组。
+  # ============================================================================
+  # - name: 全信息命名
+  #   id: full-info
+  #   movie:
+  #     folder: "{{title}} ({{year}}) [tmdbid-{{tmdbid}}]"
+  #     file: "{{title}}.{{originalTitle}}.{{year}}.{{videoFormat}}.{{audioCodec}}.{{videoCodec}}.{{dynamicRange}}.{{colorDepth}}.{{audioChannels}}.{{audioProfile}}.{{source}}.{{streamingService}}.{{edition}}.{{releaseGroup}}.{{fileExt}}"
+  #   tv:
+  #     folder: "{{title}} ({{year}}) [tmdbid-{{tmdbid}}]/Season {{season02}}"
+  #     file: "{{title}}.{{originalTitle}}.{{year}}.{{seasonEpisode}}.{{videoFormat}}.{{audioCodec}}.{{videoCodec}}.{{dynamicRange}}.{{colorDepth}}.{{audioChannels}}.{{audioProfile}}.{{source}}.{{streamingService}}.{{edition}}.{{releaseGroup}}.{{fileExt}}"
+
+  # ============================================================================
+  # 【第 2 条】全信息命名（含字幕）—— 在上面基础上，末尾多一段字幕
+  # ----------------------------------------------------------------------------
+  # 结尾样子（同一部片）：
+  #   ...BluRay Remux.Director's Cut.FRDS.PGS 简体中文.mkv
+  #                                            ^^^^^^^^^^ 只多这一段
+  # 多出来的就是 {{probeSubtitle}}，内容是 ffprobe 读到的字幕轨摘要，
+  # 常见值：PGS 简体中文 / SUP 简体&繁体 / ASS 简体。
+  #
+  # ⚠ 前提：必须在设置里开启「ffprobe 元数据提取」，否则这个变量永远是空，
+  #   结果是这条规则和上面第 1 条输出一模一样（不会报错，只是白写了）。
+  # ⚠ 什么时候值得用：同一部片你存了多个字幕版本，需要从文件名一眼分辨。
+  #   不在乎字幕，或者嫌文件名太长，就别用这条。
+  # ============================================================================
+  - name: 全信息命名（含字幕）
+    id: full-info-sub
+    movie:
+      folder: "{{title}} ({{year}}) [tmdbid-{{tmdbid}}]"
+      file: "{{title}}.{{originalTitle}}.{{year}}.{{videoFormat}}.{{audioCodec}}.{{videoCodec}}.{{dynamicRange}}.{{colorDepth}}.{{audioChannels}}.{{audioProfile}}.{{source}}.{{streamingService}}.{{edition}}.{{releaseGroup}}.{{probeSubtitle}}.{{fileExt}}"
+    tv:
+      folder: "{{title}} ({{year}}) [tmdbid-{{tmdbid}}]/Season {{season02}}"
+      file: "{{title}}.{{originalTitle}}.{{year}}.{{seasonEpisode}}.{{videoFormat}}.{{audioCodec}}.{{videoCodec}}.{{dynamicRange}}.{{colorDepth}}.{{audioChannels}}.{{audioProfile}}.{{source}}.{{streamingService}}.{{edition}}.{{releaseGroup}}.{{probeSubtitle}}.{{fileExt}}"
+
+# ==============================================================================
+# 用法备注
+# ------------------------------------------------------------------------------
+# 【两条怎么选】（把下面这段当决策表看）
+#   没开 ffprobe            → 用第 1 条（第 2 条会退化成第 1 条，白占位）
+#   开了 ffprobe，不要字幕  → 用第 1 条
+#   开了 ffprobe，要字幕    → 用第 2 条
+#
+# 【其他注意事项】
+#  1. 两条按 name 区分、可并存；文档没写清多条并存时系统如何选取，
+#     建议实际只留一条，避免误用。
+#  2. 剧集季集统一用 {{seasonEpisode}}（输出 S01E05 这种形式），与参考样本一致。
+#  3. 若某部片子 TMDB 没有中文标题，{{title}} 会回退成原名，可能出现
+#     "Scene of Crime.Scene of Crime.2004..." 这种重复——纯模板替换无法去重
+#     （命名规则没有条件分支）。真在意的话把 .{{originalTitle}} 删掉即可。
+#  4. 标题内部原有的空格会保留（"Scene of Crime" 就是这样），
+#     这里只约束「属性之间」的分隔符为点号。
+#  5. 刻意不用 {{videoProfile}}（值形如 Main 10，与 {{videoCodec}} 重复）
+#     和 {{regionCode}}（R1/A 属 DVD 时代区域码），需要就插到 {{videoCodec}} 后面。
+#  6. 文件夹同时挂年份和 TMDB ID：年份给人看，[tmdbid-xxx] 给播放器认库，
+#     两个都留着出错概率最低，别删。
+# ==============================================================================
