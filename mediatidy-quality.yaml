@@ -1,0 +1,395 @@
+# ==============================================================================
+# MediaTidy 质量评分规则（quality）
+# ==============================================================================
+#
+# 【这个文件是干什么的】
+#   给每一个片源算一个「质量总分」，分数越高越好。用在两个地方：
+#     · 首次入库：同一部片有多个候选时，留下分最高的
+#     · 洗版升级：新来的资源要比现有的高出 min_score_diff 分才会替换（见下）
+#
+# 【包含两条规则】
+#   规则一「电影洗版-多版本」→ 电影用。会同时保留两个版本：1 个 ISO + 1 个非 ISO
+#   规则二「剧集洗版」        → 剧集用。每集只留分最高的一个文件
+#
+# ------------------------------------------------------------------------------
+# 【语法：这套规则只有 4 个字段，别和分类规则/命名规则混用】
+#   enabled          是否启用这一项
+#   weight           这一项对总分的影响，可小数、可负数
+#   priority         从好到差排列的偏好列表，越靠前分越高
+#   unknown_policy   取不到这项信息时怎么办：ignore（双方跳过）/ zero（未知记 0 分）
+#   音轨、字幕还额外支持 required / min_tracks / max_tracks / preferred_tracks
+#
+#   注意：这里没有 ? / - / + 前缀，没有逗号 OR（那是分类规则），
+#        也没有 {{}} 模板变量（那是命名规则）。
+#
+# ------------------------------------------------------------------------------
+# 【评分公式】
+#   总分 = Σ（weight × 该项位置分）
+#   位置分：priority 有 N 项时，第 1 项 10 分，第 2 项 10×(N-1)/N 分……最后一项 10/N 分，
+#          没命中就是 0 分。
+#   例：priority 有 4 项时，位置分依次是 10 / 7.5 / 5 / 2.5；
+#       weight 是 35，那这一维度最高能加 350 分，最低档 87.5 分。
+#   → 一个维度的「最高影响力 = weight × 10」，总分满量程 1000 分。
+#
+# ------------------------------------------------------------------------------
+# 【本配置的权重表（总和 100）】
+#   核心四项，合计占 90%：
+#     分辨率 35 ｜ HDR 25 ｜ 音轨 18 ｜ 视频编码 12
+#   辅助六项，合计占 10%：
+#     片源 4 ｜ 色深 2 ｜ 文件大小 1.5 ｜ 帧率 1 ｜ 容器 1 ｜ 字幕 0.5
+#
+#   这样配的理由：
+#     · 分辨率最高，但只有 HDR 的 1.4 倍，不会一项独大；
+#     · 音轨提到 18%，让好音轨真能影响胜负；
+#     · 字幕只有 5 分，基本不左右结果，只用于同分时微调；
+#     · 任何单项都撑不起一个档次的差距，要有明显提升得四项一起好。
+#
+# ------------------------------------------------------------------------------
+# 【使用方式】
+#   1. 在「规则引擎 → 质量评分规则」里导入本文件（或直接在面板粘贴 YAML）。
+#   2. 电影库绑定规则一，剧集库绑定规则二（按分类目录选择适用规则）。
+#   3. 要让评分真正生效，整理方案里需开启「洗版升级」。
+#   4. 建议同时开启「源文件 / 目标文件元数据提取（ffprobe）」：
+#      不开的话音轨、字幕、色深取不到值，会按 unknown_policy 处理
+#      （本文件统一设成 ignore = 双方跳过该维度，不会因此判负，但也拿不到加分）。
+#   5. min_score_diff = 10 的含义：新文件总分必须比现有文件高 10 分以上才替换。
+#      也就是说换个字幕（+0.6）、换个色深（+6.7）不会触发洗版；
+#      换编码（+40）、升 4K（+110 起）才会。
+#
+# ------------------------------------------------------------------------------
+# 【排除规则】命中即跳过，不参与评分（精确匹配，不支持前缀匹配）
+#   分辨率 576p / 480p / 360p 直接不收。
+#   如果你的库还保留标清片源，删掉 exclude.resolutions 那行，
+#   并把 576p、480p 加回 resolution 的 priority 末尾。
+# ==============================================================================
+
+quality:
+
+  # ============================================================================
+  # 规则一：电影洗版（多版本）
+  #   需求：电影要同时保留两版 —— 一版 ISO 原盘、一版非 ISO（mkv/mp4 等）
+  #   实现方式见本规则末尾 version 段的说明
+  # ============================================================================
+  - name: 电影洗版-多版本
+    id: movie-sweep-multiver
+
+    # 洗版门槛：新文件要比现有文件高 10 分以上才替换。
+    # 调大 → 更保守，不容易被洗；调小 → 更容易换新。
+    min_score_diff: 10
+
+    scoring:
+      # ------------------------------------------------------------------
+      # 分辨率（权重 35，占比最高，满分 350 分）
+      #   从高到低：4320p > 2160p > 1080p > 720p
+      #   2160p 与 1080p 差 87.5 分，是全配置最能拉开差距的一项。
+      #   标清（576p 及以下）已在 exclude 里，所以这里不用列。
+      # ------------------------------------------------------------------
+      resolution:
+        enabled: true
+        unknown_policy: ignore
+        weight: 35
+        priority: [4320p, 2160p, 1080p, 720p]
+
+      # ------------------------------------------------------------------
+      # HDR / 动态范围（权重 25，满分 250 分）
+      #   顺序：杜比视界各档 → HDR10+ → HDR10 → HDR → HLG → SDR
+      #   P7 是双层杜比（原盘），P8 是单层（流媒体/压制），所以 P7 排前面。
+      #   完全没识别到 HDR 标签时按 SDR 计算，不是 0 分。
+      # ------------------------------------------------------------------
+      hdr:
+        enabled: true
+        unknown_policy: ignore
+        weight: 25
+        priority: [Dolby Vision P7, Dolby Vision P5, Dolby Vision P8, Dolby Vision, HDR10+, HDR10, HDR, HLG, SDR]
+
+      # ------------------------------------------------------------------
+      # 音轨（权重 18，满分 180 分）
+      #   按音频编码保真度从高到低：无损对象音效 → 无损 → 有损高码 → 有损
+      #   这里只按「音频摘要字符串」打分，不限制语言和声道。
+      #   想强制中文音轨 / 要求 Atmos 7.1，用文件末尾的【进阶】写法。
+      # ------------------------------------------------------------------
+      audio_codec:
+        enabled: true
+        unknown_policy: ignore
+        weight: 18
+        priority: [DTS:X, TrueHD Dolby Atmos 7.1, DTS-HD MA 7.1, TrueHD 7.1, DTS-HD, DDP 5.1, DTS, Dolby Digital, AAC]
+
+      # ------------------------------------------------------------------
+      # 视频编码（权重 12，满分 120 分）
+      #   AV1 体积最优，H.265 次之，H.264 最后。
+      #   同规格同码率下 H.265 比 H.264 多 40 分，足以在同分辨率里决定胜负，
+      #   但盖不过 4K 与 1080p 的差距（87.5 分）。
+      # ------------------------------------------------------------------
+      video_codec:
+        enabled: true
+        unknown_policy: ignore
+        weight: 12
+        priority: [AV1, H.265, H.264]
+
+      # ------------------------------------------------------------------
+      # 片源（权重 4，满分 40 分，只做辅助参考）
+      #   原盘重封装 > 蓝光 > 网络源 > 录制
+      #   「Remux+xxx」是组合值：文件名同时含 Remux 和该片源时才这样匹配。
+      # ------------------------------------------------------------------
+      source:
+        enabled: true
+        unknown_policy: ignore
+        weight: 4
+        priority: [Remux+UHD BluRay, Remux+BluRay, UHD BluRay, Remux+BD, BluRay, WEB-DL, WEBRip, HDTV]
+
+      # ------------------------------------------------------------------
+      # 字幕（权重 0.5，满分只有 5 分）
+      #   简体优先，繁体在后；格式 PGS > ASS > SRT。
+      #   刻意压到最低：字幕不该决定一部片子的去留，只用于同分时微调。
+      #   想「没中文字幕就不要」，用文件末尾的【进阶】写法。
+      # ------------------------------------------------------------------
+      subtitle:
+        enabled: true
+        unknown_policy: ignore
+        weight: 0.5
+        priority: [PGS 简体中文, ASS 简体中文, SRT 简体中文, PGS 繁体中文, ASS 繁体中文, SRT 繁体中文, PGS, ASS, SRT]
+
+      # ------------------------------------------------------------------
+      # 帧率（权重 1，满分 10 分）
+      #   顺序：120 > 60 > 30 > 25 > 24。帧率不是越高越新越好，权重压低。
+      # ------------------------------------------------------------------
+      frame_rate:
+        enabled: true
+        unknown_policy: ignore
+        weight: 1
+        priority: [120fps, 60fps, 30fps, 25fps, 24fps]
+
+      # ------------------------------------------------------------------
+      # 容器格式（权重 1，满分 10 分）
+      #   顺序：mkv > mp4 > avi > rmvb > ts > wmv > mpeg > mov > m2ts > iso
+      #   ISO 排最后是因为它走单独的版本槽（见下面 version），
+      #   只有「ISO 与 ISO 之间比较」时才用到这个分数。
+      # ------------------------------------------------------------------
+      file_extension:
+        enabled: true
+        unknown_policy: ignore
+        weight: 1
+        priority: [mkv, mp4, avi, rmvb, ts, wmv, mpeg, mov, m2ts, iso]
+
+      # ------------------------------------------------------------------
+      # 色深（权重 2，满分 20 分）
+      #   12-bit > 10-bit > 8-bit。主要影响渐变是否断层。
+      # ------------------------------------------------------------------
+      color_depth:
+        enabled: true
+        unknown_policy: ignore
+        weight: 2
+        priority: [12-bit, 10-bit, 8-bit]
+
+      # ------------------------------------------------------------------
+      # 文件大小（权重 1.5，满分 15 分）
+      #   数值维度：只能写 enabled / weight / unknown_policy，**不能写 priority**。
+      #   对数曲线，0.1GB 起算 0 分，约 50GB 到满分。大不等于好，所以权重很低；
+      #   想反向偏好小体积，把 weight 改成负数（如 -1.5）。
+      # ------------------------------------------------------------------
+      file_size:
+        enabled: true
+        unknown_policy: ignore
+        weight: 1.5
+
+      # ------------------------------------------------------------------
+      # 总码率（默认关闭）
+      #   同规格同编码时，码率高的通常画质更好。想启用改成 enabled: true。
+      # ------------------------------------------------------------------
+      bitrate:
+        enabled: false
+        unknown_policy: ignore
+        weight: 6
+
+    # ------------------------------------------------------------------
+    # 排除规则：命中任一项直接跳过，不算分
+    #   resolutions 按最终识别到的分辨率精确匹配
+    #   codecs 是视频编码；hdr_types 是 HDR 类型（未识别按 SDR 处理）
+    #   留空数组表示这一项不排除
+    # ------------------------------------------------------------------
+    exclude:
+      resolutions: [576p, 480p, 360p]
+      codecs: []
+      hdr_types: []
+
+    # ------------------------------------------------------------------
+    # 多版本（本配置的核心需求：电影要留两版）
+    #   原理：
+    #     · slots 里的「ISO 原盘」槽，专门收养 .iso 文件
+    #     · unmatched: best 让其余所有格式落进同一个「未匹配组」
+    #   效果：ISO 组内比出最好的 1 个，其他格式组内也比出最好的 1 个
+    #         → 最终正好保留 1 个 ISO + 1 个非 ISO，两版互不洗掉。
+    #   ISO 不会因容器分低被淘汰：它在自己的槽里比较，不和 mkv 比。
+    #   不想要 ISO 双版本 → enabled: false，ISO 会因容器分最低被正常洗掉。
+    # ------------------------------------------------------------------
+    version:
+      enabled: true
+      unmatched: best
+      slots:
+        - name: ISO 原盘
+          match:
+            file_extension: [iso]
+
+  # ============================================================================
+  # 规则二：剧集洗版（单版本）
+  #   需求：剧集不需要多版本，每集只留分最高的一个文件。
+  #   评分维度与权重和电影规则完全一致，只有 min_score_diff 与 version 不同。
+  # ============================================================================
+  - name: 剧集洗版
+    id: tv-sweep
+
+    # 剧集单集体积小、洗版成本低，门槛可以比电影更敏感一点。
+    # 想更保守调到 20，想只要有提升就换调到 1。
+    min_score_diff: 10
+
+    scoring:
+      resolution:
+        enabled: true
+        unknown_policy: ignore
+        weight: 35
+        priority: [4320p, 2160p, 1080p, 720p]
+
+      hdr:
+        enabled: true
+        unknown_policy: ignore
+        weight: 25
+        priority: [Dolby Vision P7, Dolby Vision P5, Dolby Vision P8, Dolby Vision, HDR10+, HDR10, HDR, HLG, SDR]
+
+      audio_codec:
+        enabled: true
+        unknown_policy: ignore
+        weight: 18
+        priority: [DTS:X, TrueHD Dolby Atmos 7.1, DTS-HD MA 7.1, TrueHD 7.1, DTS-HD, DDP 5.1, DTS, Dolby Digital, AAC]
+
+      video_codec:
+        enabled: true
+        unknown_policy: ignore
+        weight: 12
+        priority: [AV1, H.265, H.264]
+
+      source:
+        enabled: true
+        unknown_policy: ignore
+        weight: 4
+        priority: [Remux+UHD BluRay, Remux+BluRay, UHD BluRay, Remux+BD, BluRay, WEB-DL, WEBRip, HDTV]
+
+      subtitle:
+        enabled: true
+        unknown_policy: ignore
+        weight: 0.5
+        priority: [PGS 简体中文, ASS 简体中文, SRT 简体中文, PGS 繁体中文, ASS 繁体中文, SRT 繁体中文, PGS, ASS, SRT]
+
+      frame_rate:
+        enabled: true
+        unknown_policy: ignore
+        weight: 1
+        priority: [120fps, 60fps, 30fps, 25fps, 24fps]
+
+      file_extension:
+        enabled: true
+        unknown_policy: ignore
+        weight: 1
+        priority: [mkv, mp4, avi, rmvb, ts, wmv, mpeg, mov, m2ts, iso]
+
+      color_depth:
+        enabled: true
+        unknown_policy: ignore
+        weight: 2
+        priority: [12-bit, 10-bit, 8-bit]
+
+      file_size:
+        enabled: true
+        unknown_policy: ignore
+        weight: 1.5
+
+      bitrate:
+        enabled: false
+        unknown_policy: ignore
+        weight: 6
+
+    exclude:
+      resolutions: [576p, 480p, 360p]
+      codecs: []
+      hdr_types: []
+
+    # 剧集不分版本槽，每集只留一个
+    version:
+      enabled: false
+
+# ==============================================================================
+# 【档位是怎么排的】每个维度都按「实际观感 / 变现价值」从高到低手工排：
+#   分辨率  4320p → 720p，按像素量递减
+#   HDR     杜比视界各 Profile → HDR10+ → HDR10 → HDR → HLG → SDR
+#   音轨    无损对象音效（DTS:X / Atmos）→ 无损（DTS-HD MA / TrueHD）
+#           → 有损高码（DTS-HD / DDP）→ 有损（DTS / AC3 / AAC）
+#   编码    AV1（同画质体积最小）→ H.265 → H.264
+#   片源    原盘重封装 → 蓝光 → 网络源 → 录制
+#   如果你觉得某个档位排错了，直接调整它在 priority 里的位置即可，不用动 weight。
+# ==============================================================================
+
+# ==============================================================================
+# 【进阶：强制中文音轨 / 中文字幕】（现在没启用）
+# ------------------------------------------------------------------------------
+# 上面的 audio_codec / subtitle 是「宽松版」：中文加分，没中文也不淘汰。
+# 如果要「没中文字幕的片源直接不要」，把 scoring 里这两项换成下面的写法。
+#
+# ⚠ 前提：必须开启元数据提取（ffprobe）。轨道信息取不到时，带 required 的条件
+#   无法验证，该资源会被判为不合格 —— 这是最容易踩的坑。
+#
+#      audio_codec:
+#        enabled: true
+#        required: true        # 下面任何一项都没命中 → 资源不合格
+#        min_tracks: 1         # 至少 1 条音轨；0 表示不限制
+#        max_tracks: 3         # 最多 3 条；0 表示不限制
+#        preferred_tracks: 2   # 只在总分与优先级都相同时用于破同分
+#        weight: 18
+#        priority:
+#          - languages: [zh, zh-CN, yue]   # 一个对象内的字段是 AND，必须同一条轨道满足
+#            codecs: [Dolby TrueHD]
+#            min_channels: 8               # 8 声道 = 7.1
+#            atmos: true
+#            commentary: false
+#          - languages: [zh, zh-CN, yue]
+#            codecs: [DTS-HD MA]
+#            min_channels: 6
+#            commentary: false
+#          - languages: [zh, zh-CN, yue]   # 兜底：中文立体声也接受
+#            min_channels: 2
+#            commentary: false
+#
+#      subtitle:
+#        enabled: true
+#        required: true
+#        min_tracks: 1
+#        max_tracks: 5
+#        preferred_tracks: 2
+#        weight: 0.5
+#        priority:
+#          - languages: [zh-CN]            # 简体优先
+#            source: any                   # any = 内封或外挂都算
+#            hearing_impaired: false
+#          - languages: [zh, zh-TW, zh-HK] # 泛中文 / 繁体兜底
+#            source: any
+#            hearing_impaired: false
+#
+# 几个写错会导致保存失败的坑：
+#   · required: true 时 priority 不能为空
+#   · min_tracks 不能大于 max_tracks；preferred_tracks 要落在两者范围内
+#   · 音轨条件只能用 codecs / atmos / min_channels 这类音频字段
+#     字幕条件只能用 formats / source 这类字幕字段
+#   · priority 里不能有空对象（至少填一个匹配字段）
+# ==============================================================================
+
+# ==============================================================================
+# 【可改点】按影响从大到小
+#   1. 觉得 4K 不够强势 → resolution.weight 35 → 45，同时 hdr 25 → 20
+#      注意：位置分是固定等差数列，无法单独拉大 2160p 与 1080p 的间距，
+#      想加大差距只能整体提权，或减少 priority 里的档位数（档位越少间距越大）
+#   2. 想要更高的画质门槛 → hdr 提到 30，让 SDR 片源更难赢
+#   3. 收藏原盘、不信任压制 → source.weight 4 → 10（Remux 系列已在最前）
+#   4. 强制中文音轨 / 中文字幕 → 用上面【进阶】块替换对应维度
+#   5. 想让码率参与比较 → bitrate.enabled 改 true（默认关闭）
+#   6. 洗版太频繁 → min_score_diff 10 → 20~30；太迟钝 → 调到 1~5
+#   7. 不想保留 ISO 双版本 → 规则一 version.enabled 改 false
+#   8. 标清还在收 → 删掉 exclude.resolutions，priority 里补 576p、480p、360p
+# ==============================================================================
