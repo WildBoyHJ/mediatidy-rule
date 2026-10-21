@@ -1,5 +1,5 @@
 # ==============================================================================
-# MediaTidy 分类规则（category）
+# MediaTidy 分类规则（category）v2 —— 按实际媒体库结构重写
 # ==============================================================================
 #
 # 【这个文件是干什么的】
@@ -7,7 +7,27 @@
 #   演员导演、分级、年份、文件后缀）匹配，命中第一条规则就停止，
 #   直接使用该规则指定的目标路径。
 #
-#   本文件共 131 条：电影 97 条 + 剧集 34 条。
+#   本文件共 37 条：电影 18 条 + 剧集 19 条。
+#
+# ------------------------------------------------------------------------------
+# 【目录结构（目标路径，相对媒体库根目录）】
+#
+#   电影（8）
+#     电影/华语电影      电影/日本电影      电影/韩国电影    电影/东南亚电影
+#     电影/印度电影      电影/欧美电影      电影/其他地区电影  电影/动画电影
+#   剧集（6）
+#     剧集/国产剧集      剧集/港台剧集      剧集/日本剧集    剧集/韩国剧集
+#     剧集/欧美剧集      剧集/其他地区（兜底，承接所有未命中的国家/地区）
+#   动漫（3，只放剧集；动画长片统一进 电影/动画电影）
+#     动漫/国漫          动漫/日番          动漫/欧美漫
+#   其他大类
+#     R级/{R级华语电影,R级亚洲电影,R级欧美电影,R级剧集,R级动画电影}
+#     特摄剧/{特摄剧电影,特摄剧剧集}
+#     综艺/{综艺电影,综艺剧集}
+#     儿童/{儿童动画片,儿童剧集}
+#     纪录片/{纪录片电影,纪录片剧集}
+#     演唱会/{华语歌手演唱会,日韩歌手演唱会,欧美歌手演唱会}
+#     _未整理/剧集ISO（剧集 iso 收口，不参与质量评分）
 #
 # ------------------------------------------------------------------------------
 # 【语法：条件怎么写】
@@ -41,11 +61,17 @@
 #
 # ------------------------------------------------------------------------------
 # 【本文件的排列逻辑】
-#   电影：特摄剧电影 → 综艺电影 → 演唱会 → 纪录片 → R级 → 动漫/动画电影 → 电影（按国家）
-#   剧集：剧集ISO拦截 → 特摄剧剧集 → 综艺剧集 → 演唱会 → 纪录片 → R级 → 儿童 → 动漫 → 剧集（按国家）
+#   电影：特摄剧电影 → 综艺电影 → 演唱会 → 纪录片 → R级(动画→华语→亚洲→欧美)
+#         → 电影/动画电影 → 电影（华语/日本/韩国/东南亚/印度/其他地区/欧美兜底）
+#   剧集：剧集ISO拦截 → 特摄剧剧集 → 综艺剧集 → 演唱会 → 纪录片 → R级剧集
+#         → 儿童 → 动漫 → 剧集（国产/港台/日本/韩国/欧美/其他地区兜底）
 #
 #   原则是「题材优先，国家兜底」：先判断这是什么类型的片，再判断这是哪国的片。
-#   这样 R级、动画、演唱会这类「跨国家」的题材不会被国家规则提前吃掉。
+#
+#   为什么演唱会排在纪录片之前：
+#     演唱会规则要求「音乐类型 + 标题含演唱会类词」两个条件，已经很窄；
+#     而带 99 标签的演唱会实况（如 The Eras Tour）必须先被它接住，
+#     否则会被纪录片规则抢走。纯音乐纪录片标题不含这类词，会自然落到纪录片。
 #
 # ------------------------------------------------------------------------------
 # 【使用方式】
@@ -60,177 +86,74 @@
 # ------------------------------------------------------------------------------
 # 【注意事项（都是实际踩过的坑）】
 #   1. 顺序即优先级。从上到下匹配，命中第一条就停，后面的规则不会再执行。
-#      所以「具体系列」必须放在「它所属的通用规则」之前，例如
-#      奥特曼系列 要排在 电影/日韩动画电影 前面。
-#   2. series_actors / series_keywords 天生是可选条件，即使不写 ? 也一样。
-#      只写它们不会变成全量命中，但会**跨国家抓人**：成龙的美国片也会命中
-#      「电影/华语电影/成龙系列」。所以本文件里这类规则都额外加了
-#      original_language 来限定范围。
-#   3. 分类规则不支持正则、不支持通配符，只有「包含 / 精确 / 范围」三种匹配。
-#      需要正则的场景请用自定义识别规则，不要写在这里。
-#   4. 来源国家 ≠ 制作国家。origin_country 取 TMDB 详情顶层字段，部分条目为空，
+#      所以 R级/R级动画电影 必须排在 电影/动画电影 之前，否则情色动画会被当普通动画。
+#   2. 分类规则不支持正则、不支持通配符，只有「包含 / 精确 / 范围」三种匹配。
+#   3. 来源国家 ≠ 制作国家。origin_country 取 TMDB 详情顶层字段，部分条目为空，
 #      且系统不会用 production_countries 顶替。要按实际制作国分类时，
 #      必须显式写 production_countries。
-#   5. 排除写法只存在于「值」里（如 original_language: "-zh,-ja"），
+#   4. 排除写法只存在于「值」里（如 original_language: "-zh,-ja"），
 #      分类规则整体没有 exclude 段。
-#   6. 「电影/欧美电影」和「剧集/欧美剧集」是两条不含任何条件的保底规则，
+#   5. 兜底规则：电影靠「电影/欧美电影」（无条件）、剧集靠「剧集/其他地区」（无条件），
 #      保证没有文件落空。删掉它们，未命中的文件会走 MediaTidy 的默认行为。
-#   7. 剧集 ISO 拦截规则必须留在 tv 段第一条：它把 .iso 收进 _未整理/剧集ISO，
+#      注意剧集侧「欧美剧集」是明确国家/语言列表，不是兜底 —— 未命中的都归「其他地区」。
+#   6. 剧集 ISO 拦截规则必须留在 tv 段第一条：它把 .iso 收进 _未整理/剧集ISO，
 #      避免剧集 ISO 被质量评分当成独立版本保留。挪位置会直接失效。
+#      需要在 Emby/Jellyfin 里排除扫描 `_未整理` 这个目录。
+#   7. R级 用「情色标签 + 标题关键词」判定，不用 content_ratings。
+#      原因：国产片在 TMDB 上基本没有分级数据，按分级判断会永远落空。
+#      代价：暴力/恐怖类 R 级片不会进 R级，仍留在各自的国家目录里。
 #   8. 本文件的效果依赖 TMDB 数据质量。TMDB 缺字段时（常见于国产老剧、
-#      合拍片、冷门纪录片），对应条件不会命中，文件会落到后面的兜底规则。
-#
-# ------------------------------------------------------------------------------
-# 【目录结构约定】
-#   目标路径直接沿用媒体库现有目录树（9 个一级目录 / 139 个目录）。
-#   额外用到两个新目录：
-#     · R级/R级动画电影 —— 情色动画单独收口，不混进 动漫/儿童
-#     · _未整理/剧集ISO  —— 剧集 .iso 改道；需在 Emby/Jellyfin 里排除该目录扫描
+#      合拍片、冷门纪录片），对应条件不会命中，文件会落到国家兜底规则。
+#   9. 题材类规则（特摄/综艺/演唱会/纪录片/R级）依赖关键字或 TMDB 标签，
+#      冷门作品可能识别不到，会落到国家目录 —— 这是可接受的降级，不是错误。
 # ==============================================================================
 
 movie:
 
   # ============================================================================
-  # 一、特摄剧电影（必须最前，否则会被动画/日韩语种抢走）
+  # 一、特摄剧电影（必须最前，否则会被动画/日韩电影抢走）
   # ============================================================================
-  特摄剧/特摄剧电影/奥特曼系列:
-    ?keywords: "奥特曼,超人力霸王,ULTRAMAN,Ultraman,ultraman,迪迦,赛罗,泰罗,泽塔,特利迦,布莱泽,亚刻,欧布,捷德,艾克斯,银河奥特曼"
-    ?include_keywords: "ultraman,tokusatsu"
-  特摄剧/特摄剧电影/铠甲勇士系列:
-    ?keywords: "铠甲勇士,Armor Hero,拿瓦,捕将,刑天"
-    ?include_keywords: "tokusatsu"
   特摄剧/特摄剧电影:
-    ?keywords: "特摄,特攝,奥特曼,假面骑士,超级战队,牙狼,金甲战士,超神战队,巨神战击队,Power Rangers,超凡战队,恐龙战队,Kamen Rider,Super Sentai,VR Troopers,Beetleborgs,BIMA,神鹰勇士"
-    ?include_keywords: "tokusatsu,kaiju,super sentai,kamen rider,giant monster"
+    ?keywords: "特摄,特攝,奥特曼,超人力霸王,ULTRAMAN,Ultraman,迪迦,赛罗,泰罗,泽塔,特利迦,布莱泽,亚刻,欧布,捷德,艾克斯,银河奥特曼,铠甲勇士,Armor Hero,拿瓦,捕将,刑天,假面骑士,超级战队,牙狼,金甲战士,超神战队,巨神战击队,Power Rangers,超凡战队,恐龙战队,Kamen Rider,Super Sentai,VR Troopers,Beetleborgs,BIMA,神鹰勇士"
+    ?include_keywords: "tokusatsu,kaiju,ultraman,super sentai,kamen rider,giant monster"
 
   # ============================================================================
   # 二、综艺电影（晚会 / 德云社 / 颁奖典礼）
+  #   去掉了「综艺」「Variety」这类泛词，避免误吸普通电影
   # ============================================================================
-  # 卫视在前：卫视春晚标题里也含「春节联欢晚会」，必须先用台标关键词截住
-  综艺/综艺电影/卫视春节联欢晚会系列:
-    ?keywords: "卫视春节联欢晚会,卫视春晚,湖南卫视,东方卫视,江苏卫视,浙江卫视,北京卫视,辽宁卫视,天津卫视,安徽卫视,山东卫视,广东卫视,深圳卫视,湖北卫视,河南卫视,四川卫视,江西卫视,山西卫视,黑龙江卫视,吉林卫视,河北卫视,东南卫视,海峡卫视,凤凰卫视"
-  综艺/综艺电影/中央广播电视总台春节联欢晚会系列:
-    ?keywords: "中央广播电视总台,央视春晚,总台春晚,CCTV,春节联欢晚会,春晚"
-  综艺/综艺电影/中央广播电视总台中秋晚会系列:
-    ?keywords: "中秋晚会,总台秋晚,央视秋晚,秋晚"
-  综艺/综艺电影/元宵晚会系列:
-    ?keywords: "元宵晚会,元宵节晚会,灯会"
-  综艺/综艺电影/德云社系列:
-    ?keywords: "德云社"
-  综艺/综艺电影/颁奖典礼系列:
-    ?keywords: "颁奖,颁奖典礼,颁奖礼,金鸡奖,百花奖,华表奖,金像奖,金马奖,奥斯卡,Oscar,格莱美,Grammy,艾美奖,Emmy,金球奖,Golden Globe,MTV,白玉兰奖,飞天奖,金鹰奖,戛纳,柏林电影节,威尼斯电影节"
   综艺/综艺电影:
-    ?keywords: "爸爸去哪儿,奔跑吧,极限挑战,真人秀电影,快乐大本营,我就是演员,偶像练习生,王牌对王牌,青春环游记,向往的生活,中餐厅,亲爱的客栈,联欢晚会,周年晚会,跨年晚会,综艺,Variety"
-    ?include_keywords: "awards ceremony,variety special,television special,reality show,reality tv"
-    ?genre_ids: "10764,10767"
+    ?keywords: "春节联欢晚会,春晚,央视春晚,总台春晚,中央广播电视总台,卫视春晚,湖南卫视,东方卫视,江苏卫视,浙江卫视,北京卫视,辽宁卫视,天津卫视,安徽卫视,山东卫视,广东卫视,深圳卫视,湖北卫视,河南卫视,四川卫视,江西卫视,山西卫视,黑龙江卫视,吉林卫视,河北卫视,东南卫视,海峡卫视,凤凰卫视,中秋晚会,秋晚,元宵晚会,元宵节晚会,德云社,颁奖,颁奖典礼,颁奖礼,金鸡奖,百花奖,华表奖,金像奖,金马奖,奥斯卡,Oscar,格莱美,Grammy,艾美奖,Emmy,金球奖,Golden Globe,白玉兰奖,飞天奖,金鹰奖,戛纳,柏林电影节,威尼斯电影节,跨年晚会,联欢晚会"
+    ?include_keywords: "awards ceremony,variety special,television special,reality tv"
 
   # ============================================================================
-  # 三、演唱会（歌手系列 → 语种 → 欧美兜底）
+  # 三、演唱会（标题/标签必须像演唱会才命中；按语种分流，欧美兜底）
   # ============================================================================
-  # --- 华语歌手 ---
-  演唱会/华语歌手演唱会/湾区升明月系列:
-    keywords: "湾区升明月,升明月"
-  演唱会/华语歌手演唱会/周杰伦系列:
-    keywords: "周杰伦,Jay Chou"
-  演唱会/华语歌手演唱会/林俊杰系列:
-    keywords: "林俊杰,JJ Lin"
-  演唱会/华语歌手演唱会/王力宏系列:
-    keywords: "王力宏,Leehom Wang"
-  演唱会/华语歌手演唱会/张韶涵系列:
-    keywords: "张韶涵,Angela Chang"
-  演唱会/华语歌手演唱会/陈奕迅系列:
-    keywords: "陈奕迅,Eason Chan"
-  演唱会/华语歌手演唱会/张学友系列:
-    keywords: "张学友,Jacky Cheung"
-  演唱会/华语歌手演唱会/孙燕姿系列:
-    keywords: "孙燕姿,Stefanie Sun"
-  演唱会/华语歌手演唱会/李宗盛系列:
-    keywords: "李宗盛,Jonathan Lee"
-  # --- 日韩歌手 ---
-  演唱会/日韩歌手演唱会/初音未来系列:
-    keywords: "初音未来,初音ミク,Hatsune Miku,HATSUNE MIKU,魔法未来,MAGICAL MIRAI"
-  演唱会/日韩歌手演唱会/BTS系列:
-    keywords: "BTS,Bangtan Boys,방탄소년단"
-  演唱会/日韩歌手演唱会/BLACKPINK系列:
-    keywords: "BLACKPINK,블랙핑크"
-  演唱会/日韩歌手演唱会/TWICE系列:
-    keywords: "TWICE,트와이스"
-  演唱会/日韩歌手演唱会/SEVENTEEN系列:
-    keywords: "SEVENTEEN,세븐틴"
-  演唱会/日韩歌手演唱会/Stray Kids系列:
-    keywords: "Stray Kids,스트레이 키즈"
-  # 注意：不能只写 "IVE"——它是 "Live" 的子串（"Live in" 里就含 "ive in"），
-  # 所以这里主用 series_actors（TMDB 演员表里就是歌手/团体名），标题词只留不会误撞的组合
-  演唱会/日韩歌手演唱会/IVE系列:
-    ?series_actors: "IVE,아이브"
-    ?keywords: "아이브,IVE WORLD TOUR,IVE THE 1ST WORLD TOUR,IVE FIRST WORLD TOUR,IVE SHOW WHAT I HAVE"
-  演唱会/日韩歌手演唱会/NewJeans系列:
-    keywords: "NewJeans,뉴진스"
-  演唱会/日韩歌手演唱会/aespa系列:
-    keywords: "aespa,에스파"
-  演唱会/日韩歌手演唱会/YOASOBI系列:
-    keywords: "YOASOBI,ヨアソビ"
-  演唱会/日韩歌手演唱会/Ado系列:
-    keywords: "Ado SPECIAL,Ado WORLD,うっせぇわ,唱 - Ado,Ado 演唱会"
-  演唱会/日韩歌手演唱会/King Gnu系列:
-    keywords: "King Gnu,キングヌー"
-  演唱会/日韩歌手演唱会/Official髭男dism系列:
-    keywords: "Official髭男dism,髭男,Higedandism,ヒゲダン"
-  # --- 欧美歌手 ---
-  演唱会/欧美歌手演唱会/维也纳新年音乐会系列:
-    keywords: "维也纳新年音乐会,Neujahrskonzert,New Year's Concert,Wiener Philharmoniker,维也纳爱乐"
-  演唱会/欧美歌手演唱会/Taylor Swift系列:
-    keywords: "Taylor Swift"
-  演唱会/欧美歌手演唱会/Beyoncé系列:
-    keywords: "Beyoncé,Beyonce"
-  演唱会/欧美歌手演唱会/Coldplay系列:
-    keywords: "Coldplay"
-  演唱会/欧美歌手演唱会/Ed Sheeran系列:
-    keywords: "Ed Sheeran"
-  演唱会/欧美歌手演唱会/The Weeknd系列:
-    keywords: "The Weeknd"
-  演唱会/欧美歌手演唱会/Harry Styles系列:
-    keywords: "Harry Styles"
-  演唱会/欧美歌手演唱会/Imagine Dragons系列:
-    keywords: "Imagine Dragons"
-  演唱会/欧美歌手演唱会/Bruno Mars系列:
-    keywords: "Bruno Mars"
-  演唱会/欧美歌手演唱会/Lady Gaga系列:
-    keywords: "Lady Gaga"
-  # --- 语种兜底：音乐类 + 标题含演唱会词 ---
   演唱会/华语歌手演唱会:
     genre_ids: "10402,-16"
-    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐·会,音乐剧,交响乐,奇妙夜,喜乐会,音乐节,音樂節,歌会,现场,現場,Live,Concert,Tour,Performance,Stage,音乐秀,音乐盛宴,摇滚,MV精选集,演奏,歌剧,日本武道馆"
+    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐·会,音乐剧,交响乐,奇妙夜,喜乐会,音乐节,音樂節,歌会,现场,現場,Live,Concert,Tour,Performance,Stage,音乐秀,音乐盛宴,摇滚,MV精选集,演奏,歌剧,湾区升明月,升明月,周杰伦,Jay Chou,林俊杰,JJ Lin,王力宏,Leehom Wang,张韶涵,Angela Chang,陈奕迅,Eason Chan,张学友,Jacky Cheung,孙燕姿,Stefanie Sun,李宗盛,Jonathan Lee"
     ?original_language: "zh,cn"
     ?origin_country: "CN,TW,HK,MO"
   演唱会/日韩歌手演唱会:
     genre_ids: "10402,-16"
-    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐剧,交响乐,奇妙夜,喜乐会,音乐节,音樂節,歌会,现场,現場,Live,Concert,Tour,Performance,Stage,音乐秀,音乐盛宴,摇滚,MV精选集,演奏,歌剧,日本武道馆,初音未来,米津玄师"
+    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐剧,交响乐,奇妙夜,喜乐会,音乐节,音樂節,歌会,现场,現場,Live,Concert,Tour,Performance,Stage,音乐秀,音乐盛宴,摇滚,MV精选集,演奏,歌剧,初音未来,初音ミク,Hatsune Miku,MAGICAL MIRAI,魔法未来,BTS,Bangtan Boys,방탄소년단,BLACKPINK,블랙핑크,TWICE,트와이스,SEVENTEEN,세븐틴,Stray Kids,스트레이 키즈,아이브,IVE WORLD TOUR,IVE THE 1ST WORLD TOUR,IVE FIRST WORLD TOUR,IVE SHOW WHAT I HAVE,NewJeans,뉴진스,aespa,에스파,YOASOBI,ヨアソビ,Ado SPECIAL,Ado WORLD,うっせぇわ,King Gnu,キングヌー,Official髭男dism,髭男,Higedandism,ヒゲダン"
     ?original_language: "ja,ko"
     ?origin_country: "JP,KR"
   演唱会/欧美歌手演唱会:
     genre_ids: "10402,-16"
-    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐·会,音乐剧,交响乐,奇妙夜,喜乐会,音乐节,音樂節,歌会,现场,現場,Live,Concert,Tour,Performance,Stage,音乐秀,音乐盛宴,摇滚,MV精选集,演奏,歌剧,日本武道馆"
+    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐·会,音乐剧,交响乐,奇妙夜,喜乐会,音乐节,音樂節,歌会,现场,現場,Live,Concert,Tour,Performance,Stage,音乐秀,音乐盛宴,摇滚,MV精选集,演奏,歌剧,维也纳新年音乐会,Neujahrskonzert,New Year's Concert,Wiener Philharmoniker,维也纳爱乐,Taylor Swift,Beyoncé,Beyonce,Coldplay,Ed Sheeran,The Weeknd,Harry Styles,Imagine Dragons,Bruno Mars,Lady Gaga"
 
   # ============================================================================
-  # 四、纪录片电影（"-10402,-16" 排除音乐片与动画片误入）
+  # 四、纪录片电影（放演唱会之后：带 99 标签的演唱会实况会先被上面接住）
+  #   注意：这里不能加 ?keywords —— 一旦存在可选条件，规则就变成
+  #   「必须命中关键词才成立」，普通纪录片会全部漏掉。
   # ============================================================================
-  纪录片/纪录片电影/华语纪录片电影/阅兵系列:
-    ?keywords: "阅兵,大阅兵"
-    ?include_keywords: "military parade"
-  纪录片/纪录片电影/华语纪录片电影:
-    genre_ids: "99,-10402,-16"
-    ?original_language: "zh,cn"
-    ?origin_country: "CN,TW,HK,MO"
-  纪录片/纪录片电影/外语纪录片电影:
-    genre_ids: "99,-10402,-16"
+  纪录片/纪录片电影:
+    genre_ids: "99,-16"
 
   # ============================================================================
-  # 五、R级（情色/限制级判定，用 TMDB 标签关键词 + 标题关键词）
-  #     · R级动画电影排在本段第一条，抢在「动漫/动画电影」之前
-  #     · 本段整体位于「动漫」之前，所以情色动画不会漏进 动漫/儿童
+  # 五、R级（情色/限制级：TMDB 情色标签 + 标题关键词判定）
+  #     R级动画必须最前，且整段在 电影/动画电影 之前
   # ============================================================================
-  # 动画 + 情色标签 → 直接进 R级，不再按国家分流到 动漫/动画电影
   R级/R级动画电影:
     genre_ids: "16"
     include_keywords: "eroticism,softcore,sexual fantasy,erotic movie,unusual sexual practices,lesbian sex,gay sex,erotic thriller,erotic drama,erotic horror,erotic animation,hentai,adult animation,ecchi"
@@ -246,123 +169,16 @@ movie:
     include_keywords: "eroticism,softcore,sexual fantasy,erotic movie,unusual sexual practices,lesbian sex,gay sex,erotic thriller,erotic drama,erotic horror,erotic animation"
 
   # ============================================================================
-  # 六、动漫 / 动画电影
+  # 六、电影 / 动画电影（所有动画长片统一进这里，不再按国别细分）
   # ============================================================================
-  # --- 华语动画电影 ---
-  动漫/动画电影/华语动画电影/喜羊羊与灰太狼系列:
-    genre_ids: "16"
-    keywords: "喜羊羊,灰太狼,Pleasant Goat"
-  动漫/动画电影/华语动画电影/熊出没系列:
-    genre_ids: "16"
-    keywords: "熊出没,Boonie Bears"
-  # --- 日韩动画电影 ---
-  动漫/动画电影/日韩动画电影/哆啦A梦系列:
-    genre_ids: "16"
-    keywords: "哆啦A梦,哆啦夢,多啦A梦,Doraemon,ドラえもん"
-  动漫/动画电影/日韩动画电影/海贼王系列:
-    genre_ids: "16"
-    keywords: "海贼王,航海王,One Piece,ワンピース"
-  动漫/动画电影/日韩动画电影/火影忍者系列:
-    genre_ids: "16"
-    keywords: "火影,Naruto,ナルト"
-  动漫/动画电影/日韩动画电影/名侦探柯南系列:
-    genre_ids: "16"
-    keywords: "名侦探柯南,柯南,Detective Conan,Case Closed,名探偵コナン"
-  动漫/动画电影/日韩动画电影/死神系列:
-    genre_ids: "16"
-    keywords: "死神,Bleach,BLEACH,ブリーチ,境界"
-  动漫/动画电影/日韩动画电影/圣斗士系列:
-    genre_ids: "16"
-    keywords: "圣斗士,Saint Seiya,聖闘士星矢"
-  动漫/动画电影/日韩动画电影/蜡笔小新系列:
-    genre_ids: "16"
-    keywords: "蜡笔小新,Crayon Shin-chan,クレヨンしんちゃん"
-  动漫/动画电影/日韩动画电影/龙珠系列:
-    genre_ids: "16"
-    keywords: "龙珠,Dragon Ball,ドラゴンボール"
-  动漫/动画电影/日韩动画电影/宝可梦系列:
-    genre_ids: "16"
-    keywords: "宝可梦,神奇宝贝,宠物小精灵,Pokémon,Pokemon,ポケモン"
-  动漫/动画电影/日韩动画电影/鬼灭之刃系列:
-    genre_ids: "16"
-    keywords: "鬼灭之刃,鬼滅の刃,Demon Slayer,Kimetsu"
-  动漫/动画电影/日韩动画电影/福音战士系列:
-    genre_ids: "16"
-    keywords: "福音战士,Evangelion,エヴァンゲリオン"
-  动漫/动画电影/日韩动画电影/新海诚系列:
-    genre_ids: "16"
-    series_directors: "新海诚,Makoto Shinkai"
-    ?keywords: "你的名字,天气之子,秒速五厘米,铃芽之旅,言叶之庭"
-  动漫/动画电影/日韩动画电影/宫崎骏系列:
-    genre_ids: "16"
-    series_directors: "宫崎骏,Hayao Miyazaki"
-    ?keywords: "吉卜力,千与千寻,龙猫,天空之城,哈尔的移动城堡"
-  # --- 欧美动画电影 ---
-  动漫/动画电影/欧美动画电影/猫和老鼠系列:
-    genre_ids: "16"
-    keywords: "猫和老鼠,Tom and Jerry,Tom & Jerry"
-  动漫/动画电影/欧美动画电影/海底小纵队系列:
-    genre_ids: "16"
-    keywords: "海底小纵队,Octonauts"
-  动漫/动画电影/欧美动画电影/汪汪队立大功系列:
-    genre_ids: "16"
-    keywords: "汪汪队,PAW Patrol"
-  动漫/动画电影/欧美动画电影/玩具总动员系列:
-    genre_ids: "16"
-    keywords: "玩具总动员,Toy Story"
-  动漫/动画电影/欧美动画电影/小黄人系列:
-    genre_ids: "16"
-    keywords: "小黄人,Minions,神偷奶爸,Despicable Me"
-  动漫/动画电影/欧美动画电影/功夫熊猫系列:
-    genre_ids: "16"
-    keywords: "功夫熊猫,Kung Fu Panda"
-  # --- 动画电影国家/地区兜底 ---
-  动漫/动画电影/华语动画电影:
-    genre_ids: "16"
-    ?original_language: "zh,cn"
-    ?origin_country: "CN,TW,HK,MO"
-  动漫/动画电影/日韩动画电影:
-    genre_ids: "16"
-    ?original_language: "ja,ko"
-    ?origin_country: "JP,KR"
-  动漫/动画电影/欧美动画电影:
+  电影/动画电影:
     genre_ids: "16"
 
   # ============================================================================
-  # 七、电影（演员/导演系列 → 国家地区 → 欧美兜底）
+  # 七、电影（按国家/地区；欧美为兜底）
   # ============================================================================
-  # --- 华语电影系列（series_actors 天生可选，所以必须挂 original_language 兜住范围）---
-  电影/华语电影/周星驰系列:
-    original_language: "zh,cn"
-    series_actors: "周星驰,Stephen Chow"
-    ?series_directors: "周星驰,Stephen Chow"
-  电影/华语电影/成龙系列:
-    original_language: "zh,cn"
-    series_actors: "成龙,Jackie Chan"
-  电影/华语电影/沈腾系列:
-    original_language: "zh,cn"
-    series_actors: "沈腾"
-  电影/华语电影/王宝强系列:
-    original_language: "zh,cn"
-    series_actors: "王宝强"
-  电影/华语电影/吴京系列:
-    original_language: "zh,cn"
-    series_actors: "吴京"
-  电影/华语电影/冯小刚系列:
-    original_language: "zh,cn"
-    ?series_directors: "冯小刚,Feng Xiaogang"
-    ?series_actors: "冯小刚"
-  电影/华语电影/王家卫系列:
-    original_language: "zh,cn"
-    ?series_directors: "王家卫,Wong Kar-wai"
-  电影/华语电影/张艺谋系列:
-    original_language: "zh,cn"
-    ?series_directors: "张艺谋,Zhang Yimou"
-    ?series_actors: "张艺谋"
-  # --- 华语电影兜底 ---
   电影/华语电影:
     original_language: "zh,cn"
-  # --- 亚洲 ---
   电影/日本电影:
     ?origin_country: "JP"
     ?original_language: "ja"
@@ -370,71 +186,46 @@ movie:
     ?origin_country: "KR"
     ?original_language: "ko"
   电影/东南亚电影:
-    ?original_language: "id,th,ms,tl,vi"
+    ?original_language: "id,th,ms,tl,vi,km,lo,my"
     ?origin_country: "TH,SG,MY,PH,ID,VN,KH,LA,MM"
   电影/印度电影:
     keywords: "-战马"
     ?origin_country: "IN,-CN"
     ?original_language: "hi,ta,te,kn,mr,gu,pa,ml,bn"
-  # --- 欧美电影 / 名家系列 ---
-  电影/欧美电影/名家系列/莱昂纳多·迪卡普里奥系列:
-    series_actors: "莱昂纳多,DiCaprio"
-  电影/欧美电影/名家系列/尼古拉斯·凯奇系列:
-    series_actors: "尼古拉斯·凯奇,Nicolas Cage"
-  电影/欧美电影/名家系列/汤姆·克鲁斯系列:
-    series_actors: "汤姆·克鲁斯,Tom Cruise"
-  电影/欧美电影/名家系列/基努·里维斯系列:
-    series_actors: "基努,Keanu Reeves"
-  电影/欧美电影/名家系列/威尔·史密斯系列:
-    series_actors: "威尔·史密斯,Will Smith"
-  电影/欧美电影/名家系列/克里斯托弗·诺兰系列:
-    series_directors: "克里斯托弗·诺兰,Christopher Nolan"
-  电影/欧美电影/名家系列/史蒂文·斯皮尔伯格系列:
-    series_directors: "史蒂文·斯皮尔伯格,Steven Spielberg"
-  # --- 电影总兜底 ---
+  # 其他地区：欧洲非英语国、中东、非洲、拉美等
+  电影/其他地区电影:
+    ?origin_country: "TR,RU,UA,IL,IR,AE,SA,EG,ZA,NG,KE,MA,BR,MX,AR,CL,CO,PE,VE,GR,PL,CZ,HU,RO,BG,HR,RS,SK,SI,EE,LV,LT,IS,PT"
+    ?original_language: "tr,ru,uk,ar,fa,he,el,pl,cs,hu,ro,bg,hr,sr,sk,sl,et,lv,lt,is,pt"
+  # 电影总兜底
   电影/欧美电影:
 
 
 tv:
 
   # ============================================================================
-  # 零、剧集 ISO 不入库（必须排在本段最前，优先于下面所有分类规则）
+  # 零、剧集 ISO 不入库（必须排在最前，优先于下面所有分类规则）
   # ----------------------------------------------------------------------------
-  # 目的：剧集的 .iso 文件不进剧集目录，避免它被质量评分当成「独立版本」保留下来。
+  # 目的：剧集的 .iso 不进剧集目录，避免它被质量评分当成「独立版本」保留。
   # 原理：分类规则没有「跳过」动作，只能改道 —— 把 iso 统一收到一个不参与
   #       媒体库扫描的目录里，剧集目录就只剩正常视频文件了。
   # 影响：只作用于 tv 段，电影的 .iso 照常进入电影目录，
   #       仍由质量评分规则的 ISO 槽保留（电影 = 1 个 ISO + 1 个非 ISO）。
-  # 换目录：把下面的路径改成你自己的即可，注意要同步在 Emby/Jellyfin 里排除扫描。
-  # 想「文件完全不动、只是不整理」：分类规则做不到，请用面板里的「媒体封板」。
+  # 需要在 Emby/Jellyfin 里排除扫描 `_未整理` 这个目录。
   # ============================================================================
   _未整理/剧集ISO:
     file_extension: "iso"
 
   # ============================================================================
-  # 一、特摄剧剧集
+  # 一、特摄剧剧集（奥特曼 / 铠甲勇士 / 布袋戏 / 假面骑士等）
   # ============================================================================
-  特摄剧/特摄剧剧集/奥特曼系列:
-    ?keywords: "奥特曼,超人力霸王,ULTRAMAN,Ultraman,ultraman,迪迦,赛罗,泰罗,泽塔,特利迦,布莱泽,亚刻,欧布,捷德,艾克斯"
-    ?include_keywords: "ultraman,tokusatsu"
-  特摄剧/特摄剧剧集/布袋戏系列:
-    ?keywords: "布袋戏,霹雳,金光,Pili,Thunderbolt Fantasy,東離劍遊紀,云州大儒侠,苦海女神龙,霹雳神州,霹雳英雄"
-    ?include_keywords: "puppetry,glove puppetry"
-  特摄剧/特摄剧剧集/铠甲勇士系列:
-    ?keywords: "铠甲勇士,Armor Hero,拿瓦,捕将,刑天"
-    ?include_keywords: "tokusatsu"
   特摄剧/特摄剧剧集:
-    ?keywords: "特摄,特攝,假面骑士,超级战队,牙狼,金甲战士,超神战队,巨神战击队,Power Rangers,超凡战队,恐龙战队,Kamen Rider,Super Sentai,VR Troopers,Beetleborgs,BIMA,神鹰勇士"
-    ?include_keywords: "tokusatsu,kaiju,super sentai,kamen rider"
+    ?keywords: "特摄,特攝,奥特曼,超人力霸王,ULTRAMAN,Ultraman,迪迦,赛罗,泰罗,泽塔,特利迦,布莱泽,亚刻,欧布,捷德,艾克斯,铠甲勇士,Armor Hero,拿瓦,捕将,刑天,布袋戏,霹雳,金光,Pili,Thunderbolt Fantasy,東離劍遊紀,云州大儒侠,苦海女神龙,霹雳神州,霹雳英雄,假面骑士,超级战队,牙狼,金甲战士,超神战队,巨神战击队,Power Rangers,超凡战队,恐龙战队,Kamen Rider,Super Sentai,VR Troopers,Beetleborgs,BIMA,神鹰勇士"
+    ?include_keywords: "tokusatsu,kaiju,ultraman,super sentai,kamen rider,puppetry,glove puppetry"
 
   # ============================================================================
   # 二、综艺剧集（10764 真人秀 / 10767 脱口秀）
   # ============================================================================
-  综艺/综艺剧集/华语综艺:
-    genre_ids: "10764,10767"
-    ?original_language: "zh,cn"
-    ?origin_country: "CN,TW,HK,MO"
-  综艺/综艺剧集/外语综艺:
+  综艺/综艺剧集:
     genre_ids: "10764,10767"
 
   # ============================================================================
@@ -442,69 +233,43 @@ tv:
   # ============================================================================
   演唱会/华语歌手演唱会:
     genre_ids: "10402,-16,-10764,-10767"
-    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐剧,交响乐,音乐节,現場,Live,Concert,Tour,Performance,Stage,音乐现场"
+    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐剧,交响乐,音乐节,現場,Live,Concert,Tour,Performance,Stage,音乐现场,湾区升明月,周杰伦,Jay Chou,林俊杰,JJ Lin,王力宏,Leehom Wang,张韶涵,Angela Chang,陈奕迅,Eason Chan,张学友,Jacky Cheung,孙燕姿,Stefanie Sun,李宗盛,Jonathan Lee"
     ?original_language: "zh,cn"
     ?origin_country: "CN,TW,HK,MO"
   演唱会/日韩歌手演唱会:
     genre_ids: "10402,-16,-10764,-10767"
-    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐剧,交响乐,音乐节,現場,Live,Concert,Tour,Performance,Stage,音乐现场"
+    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐剧,交响乐,音乐节,現場,Live,Concert,Tour,Performance,Stage,音乐现场,初音未来,Hatsune Miku,BTS,Bangtan Boys,BLACKPINK,TWICE,SEVENTEEN,Stray Kids,NewJeans,aespa,YOASOBI,Ado SPECIAL,King Gnu,Official髭男dism,ヒゲダン"
     ?original_language: "ja,ko"
     ?origin_country: "JP,KR"
   演唱会/欧美歌手演唱会:
     genre_ids: "10402,-16,-10764,-10767"
-    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐剧,交响乐,音乐节,現場,Live,Concert,Tour,Performance,Stage,音乐现场"
+    keywords: "演唱会,巡演,巡迴,巡回,演出,音乐会,音乐剧,交响乐,音乐节,現場,Live,Concert,Tour,Performance,Stage,音乐现场,维也纳新年音乐会,Neujahrskonzert,Taylor Swift,Beyoncé,Coldplay,Ed Sheeran,The Weeknd,Harry Styles,Imagine Dragons,Bruno Mars,Lady Gaga"
 
   # ============================================================================
   # 四、纪录片剧集
   # ============================================================================
-  纪录片/纪录片剧集/华语纪录片:
-    genre_ids: "99,-10402,-16"
-    ?original_language: "zh,cn"
-    ?origin_country: "CN,TW,HK,MO"
-  纪录片/纪录片剧集/外语纪录片:
+  纪录片/纪录片剧集:
     genre_ids: "99,-10402,-16"
 
   # ============================================================================
-  # 五、R级（必须排在「儿童」「动漫」之前，否则情色动画会被它们吃掉）
-  #     · 树里没有「R级动画剧集」，所以剧集形态的里番也统一收到 R级动画电影
+  # 五、R级剧集（必须早于 儿童 / 动漫 / 剧集）
   # ============================================================================
-  R级/R级动画电影:
-    genre_ids: "16"
-    include_keywords: "eroticism,softcore,sexual fantasy,erotic movie,unusual sexual practices,lesbian sex,gay sex,erotic thriller,erotic drama,erotic horror,erotic animation,hentai,adult animation,ecchi"
   R级/R级剧集:
-    include_keywords: "eroticism,softcore,sexual fantasy,erotic movie,erotic drama,erotic thriller,lesbian sex,gay sex,unusual sexual practices"
+    include_keywords: "eroticism,softcore,sexual fantasy,erotic movie,erotic drama,erotic thriller,lesbian sex,gay sex,unusual sexual practices,hentai,adult animation"
 
   # ============================================================================
   # 六、儿童（必须早于「动漫」，否则儿童动画会被国漫/日番吃掉）
   # ============================================================================
-  儿童/儿童动画片/喜羊羊系列:
-    genre_ids: "16"
-    keywords: "喜羊羊,灰太狼,Pleasant Goat"
-  儿童/儿童动画片/好奇世界系列:
-    genre_ids: "16"
-    keywords: "好奇世界"
-  儿童/儿童动画片/猫和老鼠系列:
-    genre_ids: "16"
-    keywords: "猫和老鼠,Tom and Jerry,Tom & Jerry"
-  儿童/儿童动画片/蓝猫淘气三千问系列:
-    genre_ids: "16"
-    keywords: "蓝猫淘气,蓝猫"
-  儿童/儿童动画片/宝宝巴士系列:
-    genre_ids: "16"
-    keywords: "宝宝巴士,BabyBus"
-  儿童/儿童动画片/熊出没系列:
-    genre_ids: "16"
-    keywords: "熊出没,Boonie Bears"
-  儿童/儿童动画片/猪猪侠系列:
-    genre_ids: "16"
-    keywords: "猪猪侠,GG Bond"
+  # 儿童动画：命中系列名 或「动画+儿童」双类型，任一即可
   儿童/儿童动画片:
-    genre_ids: "+16,+10762"
+    ?genre_ids: "+16,+10762"
+    ?keywords: "喜羊羊,灰太狼,Pleasant Goat,好奇世界,猫和老鼠,Tom and Jerry,Tom & Jerry,蓝猫淘气,蓝猫,宝宝巴士,BabyBus,熊出没,Boonie Bears,猪猪侠,GG Bond"
+  # 儿童真人剧
   儿童/儿童剧集:
     genre_ids: "10762,-16"
 
   # ============================================================================
-  # 七、动漫 / 国漫 · 日番 · 欧美漫
+  # 七、动漫（只放剧集；动画长片统一进 电影/动画电影）
   # ============================================================================
   动漫/国漫:
     genre_ids: "16"
@@ -518,15 +283,8 @@ tv:
     genre_ids: "16"
 
   # ============================================================================
-  # 八、剧集（国产先分年代，再港台/日/韩/其他亚洲，欧美兜底）
+  # 八、剧集（按国家/地区；欧美为兜底）
   # ============================================================================
-  # 顺序讲究：先写「2005及以后」（年份缺失时不会落到「2005之前」），最后挂父级兜住无年份的
-  剧集/国产剧集/2005年及以后国产剧集:
-    origin_country: "CN"
-    year: "2005-2099"
-  剧集/国产剧集/2005年之前国产剧集:
-    origin_country: "CN"
-    year: "1900-2004"
   剧集/国产剧集:
     origin_country: "CN"
   剧集/港台剧集:
@@ -538,24 +296,9 @@ tv:
   剧集/韩国剧集:
     ?origin_country: "KR"
     ?original_language: "ko"
-  剧集/其他亚洲剧集:
-    ?original_language: "id,th,ms,tl,vi,hi,ta,te,kn,mr,gu,pa,ml,bn"
-    ?origin_country: "TH,SG,MY,PH,ID,VN,IN,PK,BD,LK,KH,LA,MM,MN,KZ,TR,IL,AE,SA,IR"
-  # --- 剧集总兜底 ---
+  # 欧美剧集：明确列出欧美国家与语言（不再是兜底）
   剧集/欧美剧集:
-
-
-# ==============================================================================
-# 【备选】R级 若想改按「地区分级」判定（而不是情色标签），
-# 把上文 R级 三条换成下面三条。前提：TMDB 上有对应地区分级数据，
-# 国产片基本没有，所以默认方案用的是情色标签 + 标题关键词。
-#
-#  R级/R级华语电影:
-#    original_language: "zh,cn"
-#    content_ratings: "US:R,US:NC-17,HK:III,TW:R,KR:18,JP:R18+"
-#  R级/R级亚洲电影:
-#    content_ratings: "US:R,US:NC-17,KR:18,JP:R18+,JP:R15+,TH:20,TH:18,TW:R,HK:III"
-#    ?original_language: "ja,ko,th,vi,id,ms,tl,hi,ta,te,ml"
-#  R级/R级欧美电影:
-#    content_ratings: "US:R,US:NC-17,GB:18,DE:18,FR:16,FR:18,ES:18,IT:14,IT:18,AU:R,AU:MA15+,CA:18+,NL:16,SE:15,DK:15,NO:15,FI:16,PT:18,BR:18,MX:C"
-# ==============================================================================
+    ?origin_country: "US,GB,CA,AU,NZ,IE,FR,DE,ES,IT,NL,BE,CH,AT,SE,NO,DK,FI,IS,PL,CZ,SK,HU,RO,BG,GR,PT"
+    ?original_language: "en,fr,de,es,it,pt,nl,sv,no,da,fi,is,pl,cs,sk,hu,ro,bg,el,ca,gl,eu"
+  # 剧集总兜底：所有未命中的国家/地区（含泰国、印度、土耳其、俄罗斯、拉美、非洲等）
+  剧集/其他地区:
