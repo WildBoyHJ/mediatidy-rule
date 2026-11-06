@@ -61,10 +61,10 @@ naming:
     id: full-info-sub
     movie:
       folder: "{{title}} ({{year}}) [tmdbid-{{tmdbid}}]"
-      file: "{{title}}.{{originalTitle}}.{{year}}.{{videoFormat}}.{{audioCodec}}.{{videoCodec}}.{{dynamicRange}}.{{colorDepth}}.{{audioChannels}}.{{audioProfile}}.{{source}}.{{streamingService}}.{{edition}}.{{releaseGroup}}.{{probeSubtitle}}.{{fileExt}}"
+      file: "{{title}}.{{year}}.{{videoFormat}}.{{audioCodec}}.{{videoCodec}}.{{dynamicRange}}.{{colorDepth}}.{{audioChannels}}.{{audioProfile}}.{{source}}.{{streamingService}}.{{edition}}.{{releaseGroup}}.{{probeSubtitle}}.{{fileExt}}"
     tv:
       folder: "{{title}} ({{year}}) [tmdbid-{{tmdbid}}]/Season {{season02}}"
-      file: "{{title}}.{{originalTitle}}.{{year}}.{{seasonEpisode}}.{{videoFormat}}.{{audioCodec}}.{{videoCodec}}.{{dynamicRange}}.{{colorDepth}}.{{audioChannels}}.{{audioProfile}}.{{source}}.{{streamingService}}.{{edition}}.{{releaseGroup}}.{{probeSubtitle}}.{{fileExt}}"
+      file: "{{title}}.{{year}}.{{seasonEpisode}}.{{videoFormat}}.{{audioCodec}}.{{videoCodec}}.{{dynamicRange}}.{{colorDepth}}.{{audioChannels}}.{{audioProfile}}.{{source}}.{{streamingService}}.{{edition}}.{{releaseGroup}}.{{probeSubtitle}}.{{fileExt}}"
 
 # ==============================================================================
 # 用法备注
