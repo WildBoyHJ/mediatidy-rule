@@ -1,0 +1,798 @@
+# ==============================================================================
+# MediaTidy 分类规则 —— 按目标目录树生成
+# 语法要点：
+#   1. 从上到下匹配，命中第一条即停 → 特摄/演唱会/综艺/动画等「窄规则」在前，地区规则在后
+#   2. 无条件前缀 = 必须(AND)；? 前缀 = 可选(OR)，存在可选条件时「必须全过 AND 可选至少过一个」
+#   3. genre_ids: +id 必须含 / -id 必须排除 / 无前缀 参与OR
+#   4. series_actors / series_keywords 自动视为可选条件；+ 前缀只用于 genre_ids 的值
+#   5. movie 用 production_countries（制作国），tv 用 origin_country（来源国），不要混用
+#   6. 电影没有"剧集/综艺"概念；综艺 10764/10767 只对 tv 有意义
+# ==============================================================================
+movie:
+
+  # ============================================================
+  # 一、特摄电影（奥特曼 / 铠甲勇士）——必须排最前，否则会先被动画/日韩抢走
+  # ============================================================
+  # 标题含 奥特曼 之一 → 归入该系列
+  特摄剧/特摄剧电影/奥特曼系列:
+    ?keywords: "奥特曼,ULTRAMAN,Ultraman,ultraman,迪迦,赛罗,泰罗,泽塔,特利迦,布莱泽,亚刻"
+  # 标题含 铠甲勇士 之一 → 归入该系列
+  特摄剧/特摄剧电影/铠甲勇士系列:
+    ?keywords: "铠甲勇士,Armor Hero"
+  # 其余特摄：标题关键词 或 TMDB 标签任一命中
+  特摄剧/特摄剧电影:
+    ?keywords: "奥特曼,假面骑士,铠甲勇士,超级战队,哥斯拉,迪迦,赛文,雷欧,艾斯,ultraman,kamen rider,super sentai,tokusatsu,kaiju,godzilla"
+    ?include_keywords: "tokusatsu,super sentai,kamen rider,kaiju,giant monster"
+
+  # ============================================================
+  # 二、综艺电影（晚会 / 德云社 / 颁奖典礼）——电影里罕见，但目录树要求
+  # ============================================================
+  # 标题含「春节联欢晚会」
+  综艺/综艺电影/中央广播电视总台春节联欢晚会系列:
+    ?keywords: "春节联欢晚会,春晚"
+  # 标题含「中秋晚会」
+  综艺/综艺电影/中央广播电视总台中秋晚会系列:
+    ?keywords: "中秋晚会"
+  # 标题含「卫视春晚」
+  综艺/综艺电影/卫视春节联欢晚会系列:
+    ?keywords: "卫视春晚,春节联欢晚会"
+  # 标题含「元宵晚会」
+  综艺/综艺电影/元宵晚会系列:
+    ?keywords: "元宵晚会"
+  # 标题含「德云社」
+  综艺/综艺电影/德云社系列:
+    ?keywords: "德云社"
+  # 标题含「颁奖典礼」
+  综艺/综艺电影/颁奖典礼系列:
+    ?keywords: "颁奖典礼,颁奖礼,大奖赛"
+  # 其它晚会 / 颁奖类电影
+  综艺/综艺电影:
+    ?keywords: "春节联欢晚会,中秋晚会,元宵晚会,联欢晚会,卫视春晚,颁奖典礼,金鸡奖,金像奖,金马奖,奥斯卡,格莱美,白玉兰奖,飞天奖,金鹰奖,德云社,春晚,周年晚会"
+    ?include_keywords: "awards ceremony,new year's eve,television special,variety special,concert film"
+
+  # ============================================================
+  # 三、演唱会（系列 → 语种 → 本层兜底；每条都带演唱会判定，避免普通剧情片误入）
+  # ============================================================
+  演唱会/华语歌手演唱会/湾区升明月系列:
+    genre_ids: "10402,99"
+    ?keywords: "湾区升明月"
+  演唱会/华语歌手演唱会/周杰伦系列:
+    genre_ids: "10402,99"
+    ?keywords: "周杰伦"
+  演唱会/华语歌手演唱会/林俊杰系列:
+    genre_ids: "10402,99"
+    ?keywords: "林俊杰"
+  演唱会/华语歌手演唱会/王力宏系列:
+    genre_ids: "10402,99"
+    ?keywords: "王力宏"
+  演唱会/华语歌手演唱会/张韶涵系列:
+    genre_ids: "10402,99"
+    ?keywords: "张韶涵"
+  演唱会/华语歌手演唱会/陈奕迅系列:
+    genre_ids: "10402,99"
+    ?keywords: "陈奕迅"
+  演唱会/华语歌手演唱会/张学友系列:
+    genre_ids: "10402,99"
+    ?keywords: "张学友"
+  演唱会/华语歌手演唱会/孙燕姿系列:
+    genre_ids: "10402,99"
+    ?keywords: "孙燕姿"
+  演唱会/华语歌手演唱会/李宗盛系列:
+    genre_ids: "10402,99"
+    ?keywords: "李宗盛"
+  演唱会/华语歌手演唱会/五月天系列:
+    genre_ids: "10402,99"
+    ?keywords: "五月天"
+  演唱会/华语歌手演唱会/邓紫棋系列:
+    genre_ids: "10402,99"
+    ?keywords: "邓紫棋,G.E.M."
+  演唱会/华语歌手演唱会/林宥嘉系列:
+    genre_ids: "10402,99"
+    ?keywords: "林宥嘉"
+  演唱会/华语歌手演唱会/薛之谦系列:
+    genre_ids: "10402,99"
+    ?keywords: "薛之谦"
+  演唱会/华语歌手演唱会/张杰系列:
+    genre_ids: "10402,99"
+    ?keywords: "张杰"
+  演唱会/华语歌手演唱会/华晨宇系列:
+    genre_ids: "10402,99"
+    ?keywords: "华晨宇"
+  演唱会/华语歌手演唱会/周深系列:
+    genre_ids: "10402,99"
+    ?keywords: "周深"
+  演唱会/华语歌手演唱会/蔡依林系列:
+    genre_ids: "10402,99"
+    ?keywords: "蔡依林"
+  演唱会/华语歌手演唱会/王菲系列:
+    genre_ids: "10402,99"
+    ?keywords: "王菲"
+  演唱会/华语歌手演唱会/张国荣系列:
+    genre_ids: "10402,99"
+    ?keywords: "张国荣"
+  演唱会/华语歌手演唱会/刘德华系列:
+    genre_ids: "10402,99"
+    ?keywords: "刘德华"
+  演唱会/华语歌手演唱会/黎明系列:
+    genre_ids: "10402,99"
+    ?keywords: "黎明"
+  演唱会/华语歌手演唱会/郭富城系列:
+    genre_ids: "10402,99"
+    ?keywords: "郭富城"
+  演唱会/华语歌手演唱会/罗大佑系列:
+    genre_ids: "10402,99"
+    ?keywords: "罗大佑"
+  演唱会/华语歌手演唱会/李荣浩系列:
+    genre_ids: "10402,99"
+    ?keywords: "李荣浩"
+  演唱会/华语歌手演唱会/毛不易系列:
+    genre_ids: "10402,99"
+    ?keywords: "毛不易"
+  演唱会/华语歌手演唱会/汪苏泷系列:
+    genre_ids: "10402,99"
+    ?keywords: "汪苏泷"
+  演唱会/华语歌手演唱会/任贤齐系列:
+    genre_ids: "10402,99"
+    ?keywords: "任贤齐"
+  演唱会/华语歌手演唱会/信乐团系列:
+    genre_ids: "10402,99"
+    ?keywords: "信乐团"
+  演唱会/日韩歌手演唱会/初音未来系列:
+    genre_ids: "10402,99"
+    ?keywords: "初音未来,HatsuneMiku"
+  演唱会/日韩歌手演唱会/BTS系列:
+    genre_ids: "10402,99"
+    ?keywords: "BTS,防弹少年团"
+  演唱会/日韩歌手演唱会/BLACKPINK系列:
+    genre_ids: "10402,99"
+    ?keywords: "BLACKPINK"
+  演唱会/日韩歌手演唱会/TWICE系列:
+    genre_ids: "10402,99"
+    ?keywords: "TWICE"
+  演唱会/日韩歌手演唱会/SEVENTEEN系列:
+    genre_ids: "10402,99"
+    ?keywords: "SEVENTEEN"
+  演唱会/日韩歌手演唱会/Stray Kids系列:
+    genre_ids: "10402,99"
+    ?keywords: "Stray Kids"
+  演唱会/日韩歌手演唱会/NewJeans系列:
+    genre_ids: "10402,99"
+    ?keywords: "NewJeans"
+  演唱会/日韩歌手演唱会/aespa系列:
+    genre_ids: "10402,99"
+    ?keywords: "aespa"
+  演唱会/日韩歌手演唱会/YOASOBI系列:
+    genre_ids: "10402,99"
+    ?keywords: "YOASOBI"
+  演唱会/日韩歌手演唱会/Ado系列:
+    genre_ids: "10402,99"
+    ?keywords: "Ado"
+  演唱会/日韩歌手演唱会/King Gnu系列:
+    genre_ids: "10402,99"
+    ?keywords: "King Gnu"
+  演唱会/日韩歌手演唱会/Official髭男dism系列:
+    genre_ids: "10402,99"
+    ?keywords: "髭男dism"
+  演唱会/日韩歌手演唱会/乃木坂系列:
+    genre_ids: "10402,99"
+    ?keywords: "乃木坂"
+  演唱会/日韩歌手演唱会/AKB48系列:
+    genre_ids: "10402,99"
+    ?keywords: "AKB48"
+  演唱会/日韩歌手演唱会/米津玄師系列:
+    genre_ids: "10402,99"
+    ?keywords: "米津玄師,米津玄师"
+  演唱会/日韩歌手演唱会/宇多田ヒカル系列:
+    genre_ids: "10402,99"
+    ?keywords: "宇多田ヒカル,宇多田光"
+  演唱会/日韩歌手演唱会/倉木麻衣系列:
+    genre_ids: "10402,99"
+    ?keywords: "倉木麻衣,仓木麻衣"
+  演唱会/日韩歌手演唱会/滨崎步系列:
+    genre_ids: "10402,99"
+    ?keywords: "滨崎步,濱崎步"
+  演唱会/日韩歌手演唱会/安室奈美恵系列:
+    genre_ids: "10402,99"
+    ?keywords: "安室奈美恵,安室奈美惠"
+  演唱会/日韩歌手演唱会/东方神起系列:
+    genre_ids: "10402,99"
+    ?keywords: "东方神起,東方神起"
+  演唱会/日韩歌手演唱会/EXO系列:
+    genre_ids: "10402,99"
+    ?keywords: "EXO"
+  演唱会/日韩歌手演唱会/NCT系列:
+    genre_ids: "10402,99"
+    ?keywords: "NCT"
+  演唱会/日韩歌手演唱会/ITZY系列:
+    genre_ids: "10402,99"
+    ?keywords: "ITZY"
+  演唱会/日韩歌手演唱会/LE SSERAFIM系列:
+    genre_ids: "10402,99"
+    ?keywords: "LE SSERAFIM"
+  演唱会/日韩歌手演唱会/Red Velvet系列:
+    genre_ids: "10402,99"
+    ?keywords: "Red Velvet"
+  演唱会/日韩歌手演唱会/IU系列:
+    genre_ids: "10402,99"
+    ?keywords: "IU,李知恩"
+  演唱会/日韩歌手演唱会/少女时代系列:
+    genre_ids: "10402,99"
+    ?keywords: "少女时代,少女時代"
+  演唱会/日韩歌手演唱会/BIGBANG系列:
+    genre_ids: "10402,99"
+    ?keywords: "BIGBANG"
+  演唱会/日韩歌手演唱会/2NE1系列:
+    genre_ids: "10402,99"
+    ?keywords: "2NE1"
+  演唱会/日韩歌手演唱会/MAMAMOO系列:
+    genre_ids: "10402,99"
+    ?keywords: "MAMAMOO"
+  演唱会/日韩歌手演唱会/TXT系列:
+    genre_ids: "10402,99"
+    ?keywords: "TXT"
+  演唱会/日韩歌手演唱会/ENHYPEN系列:
+    genre_ids: "10402,99"
+    ?keywords: "ENHYPEN"
+  演唱会/日韩歌手演唱会/ATEEZ系列:
+    genre_ids: "10402,99"
+    ?keywords: "ATEEZ"
+  演唱会/日韩歌手演唱会/(G)I-DLE系列:
+    genre_ids: "10402,99"
+    ?keywords: "(G)I-DLE"
+  演唱会/日韩歌手演唱会/NMIXX系列:
+    genre_ids: "10402,99"
+    ?keywords: "NMIXX"
+  演唱会/日韩歌手演唱会/BABYMONSTER系列:
+    genre_ids: "10402,99"
+    ?keywords: "BABYMONSTER"
+  演唱会/日韩歌手演唱会/DAY6系列:
+    genre_ids: "10402,99"
+    ?keywords: "DAY6"
+  演唱会/日韩歌手演唱会/SEKAI NO OWARI系列:
+    genre_ids: "10402,99"
+    ?keywords: "SEKAI NO OWARI"
+  演唱会/日韩歌手演唱会/RADWIMPS系列:
+    genre_ids: "10402,99"
+    ?keywords: "RADWIMPS"
+  演唱会/日韩歌手演唱会/菅田将暉系列:
+    genre_ids: "10402,99"
+    ?keywords: "菅田将暉,菅田将晖"
+  演唱会/日韩歌手演唱会/Perfume系列:
+    genre_ids: "10402,99"
+    ?keywords: "Perfume"
+  演唱会/日韩歌手演唱会/BABYMETAL系列:
+    genre_ids: "10402,99"
+    ?keywords: "BABYMETAL"
+  演唱会/欧美歌手演唱会/维也纳新年音乐会系列:
+    genre_ids: "10402,99"
+    ?keywords: "维也纳新年音乐会"
+  演唱会/欧美歌手演唱会/Taylor Swift系列:
+    genre_ids: "10402,99"
+    ?keywords: "Taylor Swift,泰勒·斯威夫特"
+  演唱会/欧美歌手演唱会/Beyoncé系列:
+    genre_ids: "10402,99"
+    ?keywords: "Beyoncé,碧昂丝,碧昂琪"
+  演唱会/欧美歌手演唱会/Coldplay系列:
+    genre_ids: "10402,99"
+    ?keywords: "Coldplay,酷玩乐队"
+  演唱会/欧美歌手演唱会/Ed Sheeran系列:
+    genre_ids: "10402,99"
+    ?keywords: "Ed Sheeran,艾德·希兰,黄老板"
+  演唱会/欧美歌手演唱会/The Weeknd系列:
+    genre_ids: "10402,99"
+    ?keywords: "The Weeknd,威肯"
+  演唱会/欧美歌手演唱会/Harry Styles系列:
+    genre_ids: "10402,99"
+    ?keywords: "Harry Styles,哈里·斯泰尔斯"
+  演唱会/欧美歌手演唱会/Imagine Dragons系列:
+    genre_ids: "10402,99"
+    ?keywords: "Imagine Dragons,梦龙乐队"
+  演唱会/欧美歌手演唱会/Bruno Mars系列:
+    genre_ids: "10402,99"
+    ?keywords: "Bruno Mars,布鲁诺·马尔斯,火星哥"
+  演唱会/欧美歌手演唱会/Lady Gaga系列:
+    genre_ids: "10402,99"
+    ?keywords: "Lady Gaga,嘎嘎小姐"
+  演唱会/欧美歌手演唱会/Adele系列:
+    genre_ids: "10402,99"
+    ?keywords: "Adele,阿黛尔"
+  演唱会/欧美歌手演唱会/Rihanna系列:
+    genre_ids: "10402,99"
+    ?keywords: "Rihanna,蕾哈娜"
+  演唱会/欧美歌手演唱会/Ariana Grande系列:
+    genre_ids: "10402,99"
+    ?keywords: "Ariana Grande,爱莉安娜·格兰德,A妹"
+  演唱会/欧美歌手演唱会/Justin Bieber系列:
+    genre_ids: "10402,99"
+    ?keywords: "Justin Bieber,贾斯汀·比伯"
+  演唱会/欧美歌手演唱会/Justin Timberlake系列:
+    genre_ids: "10402,99"
+    ?keywords: "Justin Timberlake,贾斯汀·汀布莱克"
+  演唱会/欧美歌手演唱会/Billie Eilish系列:
+    genre_ids: "10402,99"
+    ?keywords: "Billie Eilish,比莉·艾利什,碧梨"
+  演唱会/欧美歌手演唱会/Post Malone系列:
+    genre_ids: "10402,99"
+    ?keywords: "Post Malone,波兹·马龙"
+  演唱会/欧美歌手演唱会/Dua Lipa系列:
+    genre_ids: "10402,99"
+    ?keywords: "Dua Lipa,杜阿·利帕"
+  演唱会/欧美歌手演唱会/One Direction系列:
+    genre_ids: "10402,99"
+    ?keywords: "One Direction,单向组合"
+  演唱会/欧美歌手演唱会/OneRepublic系列:
+    genre_ids: "10402,99"
+    ?keywords: "OneRepublic,共和时代"
+  演唱会/欧美歌手演唱会/Maroon 5系列:
+    genre_ids: "10402,99"
+    ?keywords: "Maroon 5,魔力红"
+  演唱会/欧美歌手演唱会/Linkin Park系列:
+    genre_ids: "10402,99"
+    ?keywords: "Linkin Park,林肯公园"
+  演唱会/欧美歌手演唱会/Queen系列:
+    genre_ids: "10402,99"
+    ?keywords: "Queen,皇后乐队"
+  演唱会/欧美歌手演唱会/U2系列:
+    genre_ids: "10402,99"
+    ?keywords: "U2"
+  演唱会/欧美歌手演唱会/Metallica系列:
+    genre_ids: "10402,99"
+    ?keywords: "Metallica,金属乐队"
+  演唱会/欧美歌手演唱会/Green Day系列:
+    genre_ids: "10402,99"
+    ?keywords: "Green Day,绿日乐队"
+  演唱会/欧美歌手演唱会/Muse系列:
+    genre_ids: "10402,99"
+    ?keywords: "Muse,缪斯乐队"
+  演唱会/欧美歌手演唱会/The Beatles系列:
+    genre_ids: "10402,99"
+    ?keywords: "The Beatles,披头士,甲壳虫乐队"
+  演唱会/欧美歌手演唱会/Pink Floyd系列:
+    genre_ids: "10402,99"
+    ?keywords: "Pink Floyd,平克·弗洛伊德"
+  演唱会/欧美歌手演唱会/Eagles系列:
+    genre_ids: "10402,99"
+    ?keywords: "Eagles,老鹰乐队"
+  演唱会/欧美歌手演唱会/Michael Jackson系列:
+    genre_ids: "10402,99"
+    ?keywords: "Michael Jackson,迈克尔·杰克逊"
+  演唱会/欧美歌手演唱会/Madonna系列:
+    genre_ids: "10402,99"
+    ?keywords: "Madonna,麦当娜"
+  演唱会/欧美歌手演唱会/Elton John系列:
+    genre_ids: "10402,99"
+    ?keywords: "Elton John,埃尔顿·约翰"
+  演唱会/欧美歌手演唱会/Elvis Presley系列:
+    genre_ids: "10402,99"
+    ?keywords: "Elvis Presley,猫王"
+  演唱会/欧美歌手演唱会/Bob Dylan系列:
+    genre_ids: "10402,99"
+    ?keywords: "Bob Dylan,鲍勃·迪伦"
+  演唱会/欧美歌手演唱会/Radiohead系列:
+    genre_ids: "10402,99"
+    ?keywords: "Radiohead,电台司令"
+  演唱会/欧美歌手演唱会/AC/DC系列:
+    genre_ids: "10402,99"
+    ?keywords: "AC/DC"
+  演唱会/欧美歌手演唱会/Rolling Stones系列:
+    genre_ids: "10402,99"
+    ?keywords: "Rolling Stones,滚石乐队"
+  # 华语 + 标题/标签是演唱会
+  演唱会/华语歌手演唱会:
+    original_language: "zh,cn,bo,za"
+    ?keywords: "演唱会,巡回演唱会,音乐会,现场版,Live in,Live at,Concert"
+    ?include_keywords: "concert,concert film,music concert,live performance"
+  演唱会/日韩歌手演唱会:
+    original_language: "ja,ko"
+    ?keywords: "演唱会,巡回演唱会,音乐会,现场版,Live in,Live at,Concert"
+    ?include_keywords: "concert,concert film,music concert,live performance"
+  # 其余（含古典音乐会）
+  演唱会/欧美歌手演唱会:
+    original_language: "-zh,-cn,-ja,-ko"
+    ?keywords: "演唱会,巡回演唱会,音乐会,现场版,Live in,Live at,Concert"
+    ?include_keywords: "concert,concert film,music concert,live performance"
+  # 语言没认出来时：标题或 TMDB 标签是演唱会 → 归到 演唱会 本层
+  演唱会:
+    ?keywords: "演唱会,巡回演唱会,音乐会,现场版,Live in,Live at,Concert"
+    ?include_keywords: "concert,concert film,music concert,live performance"
+
+  # ============================================================
+  # 四、R级电影（必须在 «电影/» 与 «纪录片/» 之前，否则会被语种/纪录片先命中）
+  # ============================================================
+  # 华语 + 分级命中（分级部分缺失也不影响：可选条件全部失手时才只看语言）
+  R级/R级华语电影:
+    original_language: "zh,cn,bo,za"
+    ?content_ratings: "US:R,US:NC-17,US:TV-MA,HK:III,KR:18,JP:R18+,JP:R15+,TW:R,GB:18,DE:18"
+  R级/R级亚洲电影:
+    original_language: "ja,ko,th,vi,hi,id,ta,te,ml,bn,fa"
+    ?content_ratings: "US:R,US:NC-17,US:TV-MA,KR:18,JP:R18+,JP:R15+,TH:20,TH:18,TW:R,HK:III,GB:18,DE:18"
+  R级/R级欧美电影:
+    original_language: "en,fr,de,es,it,pt,ru,sv,no,da,fi,nl,pl,cs,el,hu,tr"
+    ?content_ratings: "US:R,US:NC-17,US:TV-MA,GB:18,GB:15,DE:18,FR:16,FR:18,ES:18,IT:14,IT:18,AU:R,AU:MA15+,CA:18+,CA:R,NL:16,SE:15,DK:15,NO:15,FI:16,PT:18,BR:18,MX:C"
+
+  # ============================================================
+  # 五、纪录片电影
+  # ============================================================
+  # 标题含「阅兵」
+  纪录片/纪录片电影/华语纪录片电影/阅兵系列:
+    ?keywords: "阅兵"
+    ?include_keywords: "military parade"
+  纪录片/纪录片电影/华语纪录片电影:
+    genre_ids: "99"
+    original_language: "zh,cn,bo,za"
+  # 纪录片 且 非动画
+  纪录片/纪录片电影/外语纪录片电影:
+    genre_ids: "99,-16"
+  纪录片/纪录片电影:
+    genre_ids: "99"
+
+  # ============================================================
+  # 六、儿童电影（排在动画电影之前：儿童IP先进儿童库）
+  # ============================================================
+  儿童/儿童动画片/喜羊羊系列:
+    genre_ids: "16"
+    ?keywords: "喜羊羊,灰太狼"
+    ?series_keywords: "喜羊羊,灰太狼"
+  儿童/儿童动画片/好奇世界系列:
+    genre_ids: "16"
+    ?keywords: "好奇世界"
+    ?series_keywords: "好奇世界"
+  儿童/儿童动画片/猫和老鼠系列:
+    genre_ids: "16"
+    ?keywords: "猫和老鼠,Tom and Jerry"
+    ?series_keywords: "猫和老鼠,Tom and Jerry"
+  儿童/儿童动画片/蓝猫淘气三千问系列:
+    genre_ids: "16"
+    ?keywords: "蓝猫淘气,蓝猫三千问,蓝猫"
+    ?series_keywords: "蓝猫淘气,蓝猫三千问,蓝猫"
+  儿童/儿童动画片/宝宝巴士系列:
+    genre_ids: "16"
+    ?keywords: "宝宝巴士,BabyBus"
+    ?series_keywords: "宝宝巴士,BabyBus"
+  儿童/儿童动画片/熊出没系列:
+    genre_ids: "16"
+    ?keywords: "熊出没"
+    ?series_keywords: "熊出没"
+  儿童/儿童动画片/猪猪侠系列:
+    genre_ids: "16"
+    ?keywords: "猪猪侠"
+    ?series_keywords: "猪猪侠"
+  # 动画(16) + 儿童(10762) 同时命中 → 儿童动画片；真人儿童电影没有16，会落到后面按语言分类
+  儿童/儿童动画片:
+    genre_ids: "+16,+10762"
+
+  # ============================================================
+  # 七、动画电影（系列 → 语种 → 兜底）
+  # ============================================================
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/哆啦A梦系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "哆啦A梦,多啦A梦,机器猫,Doraemon"
+    ?series_keywords: "哆啦A梦,多啦A梦,机器猫,Doraemon"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/海贼王系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "海贼王,航海王,ONE PIECE,One Piece"
+    ?series_keywords: "海贼王,航海王,ONE PIECE,One Piece"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/火影忍者系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "火影忍者,NARUTO,Naruto"
+    ?series_keywords: "火影忍者,NARUTO,Naruto"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/名侦探柯南系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "名侦探柯南,柯南,Detective Conan"
+    ?series_keywords: "名侦探柯南,柯南,Detective Conan"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/死神系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "死神,BLEACH,bleach,境界"
+    ?series_keywords: "死神,BLEACH,bleach,境界"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/圣斗士系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "圣斗士,Saint Seiya"
+    ?series_keywords: "圣斗士,Saint Seiya"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/蜡笔小新系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "蜡笔小新,Crayon Shin-chan"
+    ?series_keywords: "蜡笔小新,Crayon Shin-chan"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/龙珠系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "龙珠,七龙珠,Dragon Ball"
+    ?series_keywords: "龙珠,七龙珠,Dragon Ball"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/宝可梦系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "宝可梦,神奇宝贝,宠物小精灵,Pokémon,Pokemon"
+    ?series_keywords: "宝可梦,神奇宝贝,宠物小精灵,Pokémon,Pokemon"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/鬼灭之刃系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "鬼灭之刃,Demon Slayer"
+    ?series_keywords: "鬼灭之刃,Demon Slayer"
+  # 动画 + 日韩(放行华语以免《名侦探柯南》国语版落错) + 标题/系列关键词命中
+  动漫/动画电影/日韩动画电影/福音战士系列:
+    genre_ids: "16"
+    original_language: "ja,ko,zh,cn,yue,bo,za"
+    ?keywords: "福音战士,EVA,Evangelion,新世纪福音战士"
+    ?series_keywords: "福音战士,EVA,Evangelion,新世纪福音战士"
+  # 动画 + 导演含宫崎骏（自动视为可选 → 实际以 genre+director 判定，导演名以 TMDB 前6位为准）
+  动漫/动画电影/日韩动画电影/宫崎骏系列:
+    genre_ids: "16"
+    ?series_directors: "宫崎骏,Hayao Miyazaki"
+  动漫/动画电影/日韩动画电影/新海诚系列:
+    genre_ids: "16"
+    ?series_directors: "新海诚,Makoto Shinkai"
+  动漫/动画电影/欧美动画电影/猫和老鼠系列:
+    genre_ids: "16"
+    ?keywords: "猫和老鼠,Tom and Jerry"
+    ?series_keywords: "猫和老鼠,Tom and Jerry"
+  动漫/动画电影/欧美动画电影/海底小纵队系列:
+    genre_ids: "16"
+    ?keywords: "海底小纵队,Octonauts"
+    ?series_keywords: "海底小纵队,Octonauts"
+  动漫/动画电影/欧美动画电影/汪汪队立大功系列:
+    genre_ids: "16"
+    ?keywords: "汪汪队,PAW Patrol"
+    ?series_keywords: "汪汪队,PAW Patrol"
+  动漫/动画电影/欧美动画电影/玩具总动员系列:
+    genre_ids: "16"
+    ?keywords: "玩具总动员,Toy Story"
+    ?series_keywords: "玩具总动员,Toy Story"
+  动漫/动画电影/欧美动画电影/小黄人系列:
+    genre_ids: "16"
+    ?keywords: "小黄人,神偷奶爸,Minions,Despicable Me"
+    ?series_keywords: "小黄人,神偷奶爸,Minions,Despicable Me"
+  动漫/动画电影/欧美动画电影/功夫熊猫系列:
+    genre_ids: "16"
+    ?keywords: "功夫熊猫,Kung Fu Panda"
+    ?series_keywords: "功夫熊猫,Kung Fu Panda"
+  动漫/动画电影/华语动画电影:
+    genre_ids: "16"
+    original_language: "zh,cn,yue,bo,za"
+  动漫/动画电影/日韩动画电影:
+    genre_ids: "16"
+    original_language: "ja,ko"
+  # 其余动画电影（不限地区，兜底）
+  动漫/动画电影/欧美动画电影:
+    genre_ids: "16"
+    original_language: "-zh,-cn,-yue,-ja,-ko"
+  动漫/动画电影:
+    genre_ids: "16"
+
+  # ============================================================
+  # 八、华语电影（地区 + 导演/演员系列）
+  # ============================================================
+  电影/华语电影/冯小刚系列:
+    original_language: "zh,cn,yue"
+    ?series_directors: "冯小刚,Xiaogang Feng"
+  电影/华语电影/王家卫系列:
+    original_language: "zh,cn,yue"
+    ?series_directors: "王家卫,Wong Kar-wai,Wong Kar Wai"
+  电影/华语电影/张艺谋系列:
+    original_language: "zh,cn,yue"
+    ?series_directors: "张艺谋,Yimou Zhang"
+  # 演员(前6位)或导演命中 → 建系列子目录；未命中仍归 电影/华语电影
+  电影/华语电影/周星驰系列:
+    original_language: "zh,cn,yue"
+    ?series_actors: "周星驰,Stephen Chow"
+  # 演员(前6位)或导演命中 → 建系列子目录；未命中仍归 电影/华语电影
+  电影/华语电影/成龙系列:
+    original_language: "zh,cn,yue"
+    ?series_actors: "成龙,Jackie Chan"
+  # 演员(前6位)或导演命中 → 建系列子目录；未命中仍归 电影/华语电影
+  电影/华语电影/沈腾系列:
+    original_language: "zh,cn,yue"
+    ?series_actors: "沈腾"
+  # 演员(前6位)或导演命中 → 建系列子目录；未命中仍归 电影/华语电影
+  电影/华语电影/王宝强系列:
+    original_language: "zh,cn,yue"
+    ?series_actors: "王宝强"
+  # 演员(前6位)或导演命中 → 建系列子目录；未命中仍归 电影/华语电影
+  电影/华语电影/吴京系列:
+    original_language: "zh,cn,yue"
+    ?series_actors: "吴京"
+  # 华语电影兜底
+  电影/华语电影:
+    original_language: "zh,cn,yue,bo,za"
+
+  # ============================================================
+  # 九、亚洲 / 欧美
+  # ============================================================
+  电影/日本电影:
+    original_language: "ja"
+  电影/韩国电影:
+    original_language: "ko"
+  电影/印度电影:
+    original_language: "hi,ta,te,ml,bn,kn,mr,pa,gu,ur,or,as,sa"
+  电影/东南亚电影:
+    original_language: "th,vi,id,ms,km,lo,my,tl,tag,ceb,fil"
+  电影/欧美电影/名家系列/莱昂纳多·迪卡普里奥系列:
+    ?series_actors: "Leonardo DiCaprio,莱昂纳多·迪卡普里奥"
+  电影/欧美电影/名家系列/尼古拉斯·凯奇系列:
+    ?series_actors: "Nicolas Cage,尼古拉斯·凯奇"
+  电影/欧美电影/名家系列/汤姆·克鲁斯系列:
+    ?series_actors: "Tom Cruise,汤姆·克鲁斯"
+  电影/欧美电影/名家系列/基努·里维斯系列:
+    ?series_actors: "Keanu Reeves,基努·里维斯"
+  电影/欧美电影/名家系列/威尔·史密斯系列:
+    ?series_actors: "Will Smith,威尔·史密斯"
+  电影/欧美电影/名家系列/克里斯托弗·诺兰系列:
+    ?series_directors: "Christopher Nolan,克里斯托弗·诺兰"
+  电影/欧美电影/名家系列/史蒂文·斯皮尔伯格系列:
+    ?series_directors: "Steven Spielberg,史蒂文·斯皮尔伯格"
+  # 语种 或 制作国 任一命中（前面的规则已把中日韩印/东南亚语种收走，不会误伤）
+  电影/欧美电影:
+    ?original_language: "en,fr,de,es,it,pt,ru,sv,no,da,fi,nl,pl,cs,el,hu,tr"
+    ?production_countries: "US,GB,FR,DE,ES,IT,CA,AU,NZ,NL,SE,NO,DK,FI,IE,BE,CH,AT,RU,PL,PT,BR,MX,AR"
+
+  # ============================================================
+  # 保底
+  # ============================================================
+  # movie 兜底：以上全部未命中（语种/类型数据缺失的老片）
+  其它:
+    {}   # 保底：无条件，命中所有剩余
+
+tv:
+
+  # ============================================================
+  # 一、特摄剧（奥特曼/铠甲勇士/布袋戏）
+  # ============================================================
+  特摄剧/特摄剧剧集/奥特曼系列:
+    ?keywords: "奥特曼,ULTRAMAN,Ultraman,ultraman,迪迦,赛罗,泰罗,泽塔,特利迦,布莱泽,亚刻"
+    ?include_keywords: "tokusatsu"
+  特摄剧/特摄剧剧集/铠甲勇士系列:
+    ?keywords: "铠甲勇士,Armor Hero"
+    ?include_keywords: "tokusatsu"
+  # 限定中港台来源，避免《霹雳游侠》《霹雳娇娃》这类标题误入
+  特摄剧/特摄剧剧集/布袋戏系列:
+    origin_country: "CN,TW,HK"
+    ?keywords: "布袋戏,霹雳,金光,PILI"
+    ?include_keywords: "puppetry"
+  # 其余特摄剧：标题或 TMDB 标签
+  特摄剧/特摄剧剧集:
+    ?keywords: "奥特曼,假面骑士,铠甲勇士,超级战队,哥斯拉,迪迦,赛文,雷欧,艾斯,ultraman,kamen rider,super sentai,tokusatsu,kaiju,godzilla"
+    ?include_keywords: "tokusatsu,super sentai,kamen rider,kaiju,giant monster"
+
+  # ============================================================
+  # 二、综艺剧集（晚会/颁奖先出系列，再按语种）
+  # ============================================================
+  综艺/综艺电影/中央广播电视总台春节联欢晚会系列:
+    ?keywords: "春节联欢晚会,春晚"
+  综艺/综艺电影/中央广播电视总台中秋晚会系列:
+    ?keywords: "中秋晚会"
+  综艺/综艺电影/卫视春节联欢晚会系列:
+    ?keywords: "卫视春晚,春节联欢晚会"
+  综艺/综艺电影/元宵晚会系列:
+    ?keywords: "元宵晚会"
+  综艺/综艺电影/德云社系列:
+    ?keywords: "德云社"
+  综艺/综艺电影/颁奖典礼系列:
+    ?keywords: "颁奖典礼,颁奖礼,大奖赛"
+  综艺/综艺剧集/华语综艺:
+    genre_ids: "10764,10767,10763"
+    origin_country: "CN,TW,HK,SG,MY"
+  # 非华语综艺
+  综艺/综艺剧集/外语综艺:
+    genre_ids: "10764,10767,10763"
+  # 综艺标签/晚会标题兜底
+  综艺/综艺剧集:
+    ?include_keywords: "variety show,talk show,reality,晚會,晚会"
+    ?keywords: "春节联欢晚会,中秋晚会,元宵晚会,联欢晚会,卫视春晚,颁奖典礼,金鸡奖,金像奖,金马奖,奥斯卡,格莱美,白玉兰奖,飞天奖,金鹰奖,德云社,春晚,周年晚会"
+
+  # ============================================================
+  # 三、R级剧集（必须在纪录片/剧集地区分类之前）
+  # ============================================================
+  # 分级或标签任一命中。⚠ 若你的库里 TV-MA 剧太多（美剧几乎都是TV-MA），把 §3 里 US:TV-MA 删掉
+  R级/R级剧集:
+    ?content_ratings: "US:TV-MA,US:NC-17,US:R,KR:18,KR:19,JP:R18+,JP:R15+,TW:18+,HK:III,GB:18,DE:18,FR:18,AU:MA15+,AU:R,CA:18+,NL:16,SE:15"
+    ?include_keywords: "x-rated,pornography,extreme horror,erotic"
+
+  # ============================================================
+  # 四、纪录片剧集
+  # ============================================================
+  纪录片/纪录片剧集/华语纪录片:
+    genre_ids: "99"
+    origin_country: "CN,TW,HK,SG"
+  纪录片/纪录片剧集/外语纪录片:
+    genre_ids: "99,-16"
+  纪录片/纪录片剧集:
+    genre_ids: "99"
+
+  # ============================================================
+  # 五、儿童剧集
+  # ============================================================
+  儿童/儿童动画片/喜羊羊系列:
+    genre_ids: "16"
+    ?keywords: "喜羊羊,灰太狼"
+    ?series_keywords: "喜羊羊,灰太狼"
+  儿童/儿童动画片/好奇世界系列:
+    genre_ids: "16"
+    ?keywords: "好奇世界"
+    ?series_keywords: "好奇世界"
+  儿童/儿童动画片/猫和老鼠系列:
+    genre_ids: "16"
+    ?keywords: "猫和老鼠,Tom and Jerry"
+    ?series_keywords: "猫和老鼠,Tom and Jerry"
+  儿童/儿童动画片/蓝猫淘气三千问系列:
+    genre_ids: "16"
+    ?keywords: "蓝猫淘气,蓝猫三千问,蓝猫"
+    ?series_keywords: "蓝猫淘气,蓝猫三千问,蓝猫"
+  儿童/儿童动画片/宝宝巴士系列:
+    genre_ids: "16"
+    ?keywords: "宝宝巴士,BabyBus"
+    ?series_keywords: "宝宝巴士,BabyBus"
+  儿童/儿童动画片/熊出没系列:
+    genre_ids: "16"
+    ?keywords: "熊出没"
+    ?series_keywords: "熊出没"
+  儿童/儿童动画片/猪猪侠系列:
+    genre_ids: "16"
+    ?keywords: "猪猪侠"
+    ?series_keywords: "猪猪侠"
+  # 必须同时含动画(16)与儿童(10762) → 归儿童动画片
+  儿童/儿童动画片:
+    genre_ids: "+16,+10762"
+  # 儿童剧/亲子真人剧
+  儿童/儿童剧集:
+    genre_ids: "10762"
+
+  # ============================================================
+  # 六、动漫（国漫 / 日番 / 欧美漫）
+  # ============================================================
+  # 动画 且 非儿童/综艺 且 中港台来源
+  动漫/国漫:
+    genre_ids: "16,-10762,-10764"
+    origin_country: "CN,TW,HK"
+  动漫/日番:
+    genre_ids: "16"
+    origin_country: "JP"
+  # 其余动画剧集
+  动漫/欧美漫:
+    genre_ids: "16"
+    origin_country: "-CN,-TW,-HK,-JP"
+  # 动画但来源国为空 → 动漫本层
+  动漫:
+    genre_ids: "16"
+
+  # ============================================================
+  # 七、剧集（按国家/地区；国产剧按年份拆）
+  # ============================================================
+  剧集/国产剧集/2005年之前国产剧集:
+    origin_country: "CN"
+    year: "1900-2004"
+  # 上面规则先收走 1900-2004；剩下的 CN（2005+ 或年份缺失）都落这里
+  剧集/国产剧集/2005年及以后国产剧集:
+    origin_country: "CN"
+  剧集/港台剧集:
+    origin_country: "TW,HK,MO"
+  剧集/日本剧集:
+    origin_country: "JP"
+  剧集/韩国剧集:
+    origin_country: "KR,KP"
+  剧集/其他亚洲剧集:
+    origin_country: "TH,VN,SG,MY,PH,IN,ID,MM,KH,LA,MN,BD,LK,NP,PK"
+  # 来源国 或 制作国 任一命中（前面的规则已把中日韩及其他亚洲收走）
+  剧集/欧美剧集:
+    ?origin_country: "US,GB,FR,DE,ES,IT,CA,AU,NZ,NL,SE,NO,DK,FI,IE,BE,CH,AT,RU,PL,PT,BR,MX,AR"
+    ?production_countries: "US,GB,FR,DE,ES,IT,CA,AU,NZ,NL,SE,NO,DK,FI,IE,BE,CH,AT,RU,PL,PT,BR,MX,AR"
+
+  # ============================================================
+  # 保底
+  # ============================================================
+  其它:
+    {}   # 保底：无条件，命中所有剩余

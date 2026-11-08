@@ -1,0 +1,7 @@
+# 统一使用 LF，避免 YAML 在不同系统间出现换行差异
+*.yaml text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+
+# 历史版本里的中文文件名按二进制处理，防止转码
+历史版本/** binary

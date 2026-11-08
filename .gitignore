@@ -1,0 +1,13 @@
+# 本目录用于 GitHub 同步时排除本地专属文件
+# 本地验证脚本（不属于发布内容）
+verify_rules.py
+
+# 系统与编辑器
+Thumbs.db
+.DS_Store
+desktop.ini
+*.tmp
+*.bak
+
+# 推送脚本
+推送.bat
